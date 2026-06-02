@@ -98,16 +98,12 @@ scene.environment = renderTarget.texture;
 // ==========================================
 // 4. SISTEMA DE ILUMINACIÓN VINCULADA A LA CÁMARA
 // ==========================================
-// Luz ambiental muy suave para mantener las sombras base estables
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
 scene.add(ambientLight);
 
-// ¡CLAVE!: Creamos la luz direccional principal
 const cameraLight = new THREE.DirectionalLight(0xffffff, 1.5); 
-// La posicionamos ligeramente desplazada del lente (arriba y a la derecha de la pantalla)
 cameraLight.position.set(2, 3, 4); 
 
-// Agregamos la luz a la cámara, y luego la cámara a la escena
 camera.add(cameraLight);
 scene.add(camera); 
 
@@ -130,16 +126,14 @@ loader.load(
                     mat.map.colorSpace = THREE.SRGBColorSpace;
                 }
 
-                // Incrementamos levemente la fuerza del reflejo metálico nativo
                 mat.envMapIntensity = 2.2; 
                 mat.needsUpdate = true;
             }
         });
 
         scene.add(model);
-        console.log(`[Éxito] Modelo nft${modelId}.glb cargado con luz interactiva vinculada a la cámara.`);
+        console.log(`[Éxito] Modelo nft${modelId}.glb cargado con luz interactiva.`);
         
-        // --- AUTO-ENCUADRE Y SUPER ZOOM PERMITIDO ---
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
@@ -147,7 +141,6 @@ loader.load(
         controls.target.copy(center);
         const maxDim = Math.max(size.x, size.y, size.z);
         
-        // Súper zoom activado (detiene la cámara justo antes de chocar)
         controls.minDistance = maxDim * 0.15; 
         controls.maxDistance = maxDim * 4.0; 
 
@@ -166,7 +159,7 @@ loader.load(
 
 
 // ==========================================
-// 6. ANIMACIÓN Y RESPONSIVIDAD
+// 6. ANIMACIÓN Y RESPONSIVIDAD (PARCHE OPENSEA)
 // ==========================================
 function animate() {
     requestAnimationFrame(animate);
@@ -175,8 +168,23 @@ function animate() {
 }
 animate();
 
-window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+// Fuerza a Three.js a calcular el tamaño real de la ventana del iframe
+function resizeViewer() {
+    const width = window.innerWidth || document.documentElement.clientWidth;
+    const height = window.innerHeight || document.documentElement.clientHeight;
+    
+    if (width > 0 && height > 0) {
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(width, height);
+    }
+}
+
+window.addEventListener('resize', resizeViewer);
+
+// Reajusta el tamaño en momentos clave del arranque para romper la caché del marco colapsado
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(resizeViewer, 100);
+    setTimeout(resizeViewer, 500);
+    setTimeout(resizeViewer, 1500);
 });

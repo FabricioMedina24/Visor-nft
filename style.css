@@ -1,9 +1,17 @@
-body {
+html, body {
     margin: 0;
+    padding: 0;
+    width: 100% !important;
+    height: 100% !important;
     overflow: hidden;
-    background: #111;
+    background-color: #111111 !important; /* Mantiene tu fondo oscuro */
 }
 
 canvas {
     display: block;
+    width: 100vw !important;  /* Fuerza el ancho total del cuadro de OpenSea */
+    height: 100vh !important; /* Fuerza el alto total del cuadro de OpenSea */
+    position: absolute;
+    top: 0;
+    left: 0;
 }
