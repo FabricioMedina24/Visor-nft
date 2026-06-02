@@ -96,14 +96,20 @@ scene.environment = renderTarget.texture;
 
 
 // ==========================================
-// 4. ILUMINACIÓN DIRECTA DE APOYO
+// 4. SISTEMA DE ILUMINACIÓN VINCULADA A LA CÁMARA
 // ==========================================
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+// Luz ambiental muy suave para mantener las sombras base estables
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
 scene.add(ambientLight);
 
-const mainLight = new THREE.DirectionalLight(0xffffff, 1.4); 
-mainLight.position.set(4, 6, 5);
-scene.add(mainLight);
+// ¡CLAVE!: Creamos la luz direccional principal
+const cameraLight = new THREE.DirectionalLight(0xffffff, 1.5); 
+// La posicionamos ligeramente desplazada del lente (arriba y a la derecha de la pantalla)
+cameraLight.position.set(2, 3, 4); 
+
+// Agregamos la luz a la cámara, y luego la cámara a la escena
+camera.add(cameraLight);
+scene.add(camera); 
 
 
 // ==========================================
@@ -124,15 +130,14 @@ loader.load(
                     mat.map.colorSpace = THREE.SRGBColorSpace;
                 }
 
-                // Si el GLB tiene sus texturas incrustadas de forma interna,
-                // respetamos sus mapas ORM nativos y avivamos el reflejo de estudio.
-                mat.envMapIntensity = 2.0; 
+                // Incrementamos levemente la fuerza del reflejo metálico nativo
+                mat.envMapIntensity = 2.2; 
                 mat.needsUpdate = true;
             }
         });
 
         scene.add(model);
-        console.log(`[Éxito] Modelo nft${modelId}.glb renderizado de forma nativa.`);
+        console.log(`[Éxito] Modelo nft${modelId}.glb cargado con luz interactiva vinculada a la cámara.`);
         
         // --- AUTO-ENCUADRE Y SUPER ZOOM PERMITIDO ---
         const box = new THREE.Box3().setFromObject(model);
@@ -142,7 +147,7 @@ loader.load(
         controls.target.copy(center);
         const maxDim = Math.max(size.x, size.y, size.z);
         
-        // Permite acercarse de forma extrema al óleo y al marco (Zoom Macro)
+        // Súper zoom activado (detiene la cámara justo antes de chocar)
         controls.minDistance = maxDim * 0.15; 
         controls.maxDistance = maxDim * 4.0; 
 
