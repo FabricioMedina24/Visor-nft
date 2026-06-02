@@ -11,13 +11,12 @@ const modelPath = `models/nft${modelId}.glb`;
 
 
 // ==========================================
-// 2. CONFIGURACIÓN DEL RENDERIZADOR (ACTIVA TEXTURAS)
+// 2. CONFIGURACIÓN DEL RENDERIZADOR PROFESIONAL
 // ==========================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111);
+scene.background = new THREE.Color(0x111111); // Tu fondo oscuro
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 2, 5);
 
 const renderer = new THREE.WebGLRenderer({ 
     antialias: true,
@@ -26,10 +25,10 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 
-// --- CONFIGURACIÓN CRÍTICA PARA MAPAS DE TEXTURAS PBR ---
-renderer.toneMapping = THREE.ACESFilmicToneMapping; // Mapeo tonal cinematográfico (colores realistas)
-renderer.toneMappingExposure = 1.0;                // Controla la exposición general de la luz
-renderer.outputColorSpace = THREE.SRGBColorSpace;   // Fuerza el espacio de color correcto para texturas
+// Configuración de color e iluminación PBR estricta
+renderer.toneMapping = THREE.ACESFilmicToneMapping; 
+renderer.toneMappingExposure = 1.2; // Sube o baja esto si lo ves muy brillante o muy oscuro
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 document.body.appendChild(renderer.domElement);
 
@@ -39,25 +38,48 @@ controls.dampingFactor = 0.05;
 
 
 // ==========================================
-// 3. ILUMINACIÓN AVANZADA (Esencial para Normal/Roughness maps)
+// 3. ENTORNO DE REFLEJOS AUTOMÁTICO (El truco maestro)
 // ==========================================
-// Una luz ambiental suave para rellenar sombras oscuras
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+// Creamos una escena de iluminación ambiental realista para que el metal tenga qué reflejar
+const pmremGenerator = new THREE.PMREMGenerator(renderer);
+pmremGenerator.compileEquirectangularShader();
+
+// Generamos un mapa de entorno artificial neutral
+const envScene = new THREE.Scene();
+const lightRoom = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 10, 10),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide })
+);
+envScene.add(lightRoom);
+
+const renderTarget = pmremGenerator.fromScene(envScene);
+scene.environment = renderTarget.texture; // <-- Esto activa los reflejos en los mapas 3D
+
+
+// ==========================================
+// 4. ILUMINACIÓN ESTUDIO (Luces de tres puntos)
+// ==========================================
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambientLight);
 
-// Luz principal (actúa como sol, resalta brillos metálicos y rugosidad)
+// Luz frontal principal
 const mainLight = new THREE.DirectionalLight(0xffffff, 2.5);
-mainLight.position.set(5, 10, 7);
+mainLight.position.set(2, 4, 6);
 scene.add(mainLight);
 
-// Luz de contra (evita que el modelo se vea plano por detrás)
-const backLight = new THREE.DirectionalLight(0xffffff, 1.5);
-backLight.position.set(-5, 5, -5);
-scene.add(backLight);
+// Luz de relleno lateral (suaviza las sombras negras quemadas)
+const fillLight = new THREE.DirectionalLight(0xffffff, 1.5);
+fillLight.position.set(-6, 2, 2);
+scene.add(fillLight);
+
+// Luz de contra superior (resalta los bordes dorados de arriba)
+const topLight = new THREE.DirectionalLight(0xffffff, 2.0);
+topLight.position.set(0, 8, -4);
+scene.add(topLight);
 
 
 // ==========================================
-// 4. CARGA DEL GLB (Manteniendo perfiles de color)
+// 5. CARGA DEL GLB CON CONFIGURACIÓN DE MATERIALES
 // ==========================================
 const loader = new GLTFLoader();
 
@@ -66,34 +88,35 @@ loader.load(
     function (gltf) {
         const model = gltf.scene;
 
-        // Recorremos cada parte del modelo para asegurarnos de que sus materiales
-        // procesen correctamente todos los mapas de texturas 3D importados
+        // Recorremos el modelo para configurar de forma agresiva cada textura
         model.traverse((child) => {
             if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-                
-                // Si el material tiene texturas asignadas de Blender/Substance, forzamos su espacio de color
+                // Forzar texturas al espacio sRGB correcto
                 if (child.material.map) {
                     child.material.map.colorSpace = THREE.SRGBColorSpace;
                 }
                 
-                // Activa la renderización correcta de mapas normales y de rugosidad
+                // Si el modelo incluye mapas de normales o rugosidad, nos aseguramos de que se activen
+                if (child.material.normalMap) child.material.normalScale.set(1, 1);
+                if (child.material.roughnessMap) child.material.roughness = 1.0;
+                
+                // Permitir que el material use el entorno de reflejos que creamos arriba
+                child.material.envMapIntensity = 1.5; // Ajusta la intensidad del reflejo en el metal
                 child.material.needsUpdate = true;
             }
         });
 
         scene.add(model);
-        console.log(`[Éxito] Modelo nft${modelId}.glb y sus texturas cargados.`);
+        console.log(`[Éxito] Modelo nft${modelId}.glb renderizado en alta definición.`);
         
-        // Auto-encuadre de cámara
+        // Auto-encuadre perfecto
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
         
         controls.target.copy(center);
         const maxDim = Math.max(size.x, size.y, size.z);
-        camera.position.set(center.x, center.y + (maxDim * 0.2), center.z + (maxDim * 2.0));
+        camera.position.set(center.x, center.y, center.z + (maxDim * 1.8));
         camera.lookAt(center);
         
         controls.update();
@@ -108,7 +131,7 @@ loader.load(
 
 
 // ==========================================
-// 5. ANIMACIÓN Y RESPONSIVIDAD
+// 6. ANIMACIÓN Y RESPONSIVIDAD
 // ==========================================
 function animate() {
     requestAnimationFrame(animate);
