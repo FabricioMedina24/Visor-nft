@@ -11,12 +11,12 @@ const modelPath = `models/nft${modelId}.glb`;
 
 
 // ==========================================
-// 2. CONFIGURACIÓN DEL RENDERIZADOR (ESTÁNDAR PBR)
+// 2. CONFIGURACIÓN DEL RENDERIZADOR NATIVO
 // ==========================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111); // Fondo oscuro elegante
+scene.background = new THREE.Color(0x111111); 
 
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
 
 const renderer = new THREE.WebGLRenderer({ 
     antialias: true, 
@@ -26,7 +26,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-renderer.toneMappingExposure = 1.3; // Exposición perfecta para resaltar el oro
+renderer.toneMappingExposure = 1.25; 
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 document.body.appendChild(renderer.domElement);
@@ -72,28 +72,7 @@ startAutoRotation();
 
 
 // ==========================================
-// 3. CARGA MANUAL DE TUS 3 TEXTURAS (MÉTODO ULTRA SEGURO)
-// ==========================================
-const textureLoader = new THREE.TextureLoader();
-
-// Carga del mapa de color base
-const baseColorTex = textureLoader.load('textures/DefaultMaterial_baseColor.png');
-baseColorTex.colorSpace = THREE.SRGBColorSpace; // Espacio sRGB para que los colores no se laven
-baseColorTex.flipY = false; // GLTF usa el eje Y invertido, desactivamos flipY para alinearlo
-
-// Carga del mapa de normales (relieve)
-const normalTex = textureLoader.load('textures/DefaultMaterial_normal.png');
-normalTex.colorSpace = THREE.NoColorSpace; // Las normales son datos vectoriales, no llevan sRGB
-normalTex.flipY = false;
-
-// Carga del mapa ORM empaquetado (Oclusión, Rugosidad, Metal)
-const ormTex = textureLoader.load('textures/DefaultMaterial_occlusionRoughnessMetallic.png');
-ormTex.colorSpace = THREE.NoColorSpace; // Datos físicos puros
-ormTex.flipY = false;
-
-
-// ==========================================
-// 4. GENERACIÓN DE ENTORNO HDRI DE ESTUDIO REAL
+// 3. GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
 // ==========================================
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
@@ -117,5 +96,82 @@ scene.environment = renderTarget.texture;
 
 
 // ==========================================
-// 5. ILUMINACIÓN DIRECTA DE RELLENO
-// =================
+// 4. ILUMINACIÓN DIRECTA DE APOYO
+// ==========================================
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6); 
+scene.add(ambientLight);
+
+const mainLight = new THREE.DirectionalLight(0xffffff, 1.4); 
+mainLight.position.set(4, 6, 5);
+scene.add(mainLight);
+
+
+// ==========================================
+// 5. CARGA AUTÓNOMA DE MATERIALES NATIVOS
+// ==========================================
+const loader = new GLTFLoader();
+
+loader.load(
+    modelPath, 
+    function (gltf) {
+        const model = gltf.scene;
+
+        model.traverse((child) => {
+            if (child.isMesh) {
+                const mat = child.material;
+
+                if (mat.map) {
+                    mat.map.colorSpace = THREE.SRGBColorSpace;
+                }
+
+                // Si el GLB tiene sus texturas incrustadas de forma interna,
+                // respetamos sus mapas ORM nativos y avivamos el reflejo de estudio.
+                mat.envMapIntensity = 2.0; 
+                mat.needsUpdate = true;
+            }
+        });
+
+        scene.add(model);
+        console.log(`[Éxito] Modelo nft${modelId}.glb renderizado de forma nativa.`);
+        
+        // --- AUTO-ENCUADRE Y SUPER ZOOM PERMITIDO ---
+        const box = new THREE.Box3().setFromObject(model);
+        const size = box.getSize(new THREE.Vector3());
+        const center = box.getCenter(new THREE.Vector3());
+        
+        controls.target.copy(center);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        
+        // Permite acercarse de forma extrema al óleo y al marco (Zoom Macro)
+        controls.minDistance = maxDim * 0.15; 
+        controls.maxDistance = maxDim * 4.0; 
+
+        camera.position.set(center.x, center.y, center.z + (maxDim * 1.8));
+        camera.lookAt(center);
+        
+        controls.update();
+    }, 
+    function (xhr) {
+        if (xhr.total > 0) console.log(`Cargando modelo: ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+    }, 
+    function (error) {
+        console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
+    }
+);
+
+
+// ==========================================
+// 6. ANIMACIÓN Y RESPONSIVIDAD
+// ==========================================
+function animate() {
+    requestAnimationFrame(animate);
+    controls.update(); 
+    renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
