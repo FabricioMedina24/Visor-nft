@@ -25,9 +25,8 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 
-// Mapeo tonal ideal para conservar negros profundos y contrastes
 renderer.toneMapping = THREE.LinearToneMapping; 
-renderer.toneMappingExposure = 1.0; 
+renderer.toneMappingExposure = 1.1; 
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 document.body.appendChild(renderer.domElement);
@@ -38,20 +37,60 @@ controls.dampingFactor = 0.05;
 
 
 // ==========================================
+// LÓGICA DE ROTACIÓN AUTOMÁTICA TRAS INACTIVIDAD
+// ==========================================
+let isUserInteracting = false;
+let autoRotateTimeout;
+
+// Esta función activa la rotación automática en los controles
+function startAutoRotation() {
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 1.0; // Velocidad del giro en 360° (ajusta si lo quieres más rápido o lento)
+}
+
+// Esta función resetea el contador de 5 segundos
+function resetInactivityTimer() {
+    controls.autoRotate = false; // Detiene el giro inmediatamente
+    isUserInteracting = true;
+    
+    // Limpia el temporizador anterior
+    clearTimeout(autoRotateTimeout);
+    
+    // Si pasan 5000ms (5 segundos) sin interacción, vuelve a girar
+    autoRotateTimeout = setTimeout(() => {
+        isUserInteracting = false;
+        startAutoRotation();
+    }, 5000);
+}
+
+// Escuchamos los eventos del mouse/touch sobre el visor
+controls.addEventListener('start', () => {
+    isUserInteracting = true;
+    controls.autoRotate = false;
+    clearTimeout(autoRotateTimeout);
+});
+
+controls.addEventListener('end', () => {
+    // Cuando el usuario suelta el mouse, empiezan a correr los 5 segundos
+    resetInactivityTimer();
+});
+
+// Iniciamos el temporizador por primera vez al cargar la página
+startAutoRotation();
+
+
+// ==========================================
 // 3. MAPA DE ENTORNO SUTIL (Reflejos de metal real)
 // ==========================================
-// Generamos un entorno con degradados y variaciones físicas para que el metal tenga reflejos reales con detalle
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 
 const envScene = new THREE.Scene();
-// Creamos una estructura que simula un estudio fotográfico oscuro con luces clave flotantes
 const roomGeo = new THREE.BoxGeometry(12, 12, 12);
-const roomMat = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.BackSide }); // Paredes oscuras para no lavar el modelo
+const roomMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.BackSide }); 
 const room = new THREE.Mesh(roomGeo, roomMat);
 envScene.add(room);
 
-// Añadimos paneles de luz blanca al "estudio virtual" para que se reflejen como líneas nítidas en el metal dorado
 const lightPanel1 = new THREE.Mesh(new THREE.BoxGeometry(2, 6, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffff }));
 lightPanel1.position.set(4, 2, 4);
 envScene.add(lightPanel1);
@@ -65,25 +104,22 @@ scene.environment = renderTarget.texture;
 
 
 // ==========================================
-// 4. ILUMINACIÓN CONTROLADA (Conserva la atmósfera oscura)
+// 4. ILUMINACIÓN CONTROLADA
 // ==========================================
-// Luz ambiental muy baja para mantener las sombras misteriosas y oscuras
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
 scene.add(ambientLight);
 
-// Luz principal suave (aporta volumen sin quemar la imagen interna)
-const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+const mainLight = new THREE.DirectionalLight(0xffffff, 1.3); 
 mainLight.position.set(3, 5, 5);
 scene.add(mainLight);
 
-// Luz de recorte trasera (da un sutil destello en los relieves dorados traseros)
-const rimLight = new THREE.DirectionalLight(0xffffff, 0.8);
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.9); 
 rimLight.position.set(-3, 3, -4);
 scene.add(rimLight);
 
 
 // ==========================================
-// 5. CARGA DEL GLB Y RE-AJUSTE DE MATERIALES PBR
+// 5. CARGA DEL GLB Y AJUSTE DE REFLEJOS FINOS
 // ==========================================
 const loader = new GLTFLoader();
 
@@ -98,23 +134,19 @@ loader.load(
                     child.material.map.colorSpace = THREE.SRGBColorSpace;
                 }
                 
-                // Mantenemos la configuración original de texturas que hiciste en tu software de 3D
                 if (child.material.roughnessMap) {
-                    // Si tiene mapa de rugosidad, dejamos que la textura controle el brillo plástico
                     child.material.roughness = 1.0; 
                 } else {
-                    // Si no tiene mapa, le damos un toque intermedio para que no parezca espejo ni plástico flojo
-                    child.material.roughness = 0.4; 
+                    child.material.roughness = 0.25; 
                 }
                 
-                // Controlamos qué tan fuerte impacta nuestro entorno en los reflejos del oro
-                child.material.envMapIntensity = 1.0; 
+                child.material.envMapIntensity = 1.8; 
                 child.material.needsUpdate = true;
             }
         });
 
         scene.add(model);
-        console.log(`[Éxito] Modelo nft${modelId}.glb renderizado con balance de contraste.`);
+        console.log(`[Éxito] Modelo nft${modelId}.glb renderizado con auto-giro por inactividad.`);
         
         // Auto-encuadre
         const box = new THREE.Box3().setFromObject(model);
@@ -142,7 +174,11 @@ loader.load(
 // ==========================================
 function animate() {
     requestAnimationFrame(animate);
+    
+    // IMPORTANTE: controls.update() es lo que hace girar la cámara automáticamente
+    // cuando controls.autoRotate está activado
     controls.update(); 
+    
     renderer.render(scene, camera);
 }
 animate();
