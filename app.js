@@ -1,7 +1,10 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'; // <-- 1. Importamos el cargador
 
 const scene = new THREE.Scene();
+// Cambiamos el fondo a un gris claro para contrastar mejor el modelo
+scene.background = new THREE.Color(0xaaaaaa); 
 
 const camera = new THREE.PerspectiveCamera(
     75,
@@ -9,50 +12,55 @@ const camera = new THREE.PerspectiveCamera(
     0.1,
     1000
 );
+camera.position.set(0, 2, 5); // Posición inicial de la cámara (X, Y, Z)
 
-const renderer = new THREE.WebGLRenderer({
-    antialias: true
-});
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-renderer.setSize(
-    window.innerWidth,
-    window.innerHeight
-);
-
-document.body.appendChild(
-    renderer.domElement
-);
-
-const geometry = new THREE.BoxGeometry();
-const material = new THREE.MeshNormalMaterial();
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
-
-camera.position.z = 5; // Lo alejé un poco más para que aprecies mejor el zoom
-
-// Instanciamos los controles pasándole la cámara y el elemento del renderizador
 const controls = new OrbitControls(camera, renderer.domElement);
-
-// Opcional: añade amortiguación (inercia) para que se mueva más suave
 controls.enableDamping = true;
-controls.dampingFactor = 0.05;
 
+// --- 2. AGREGAR ILUMINACIÓN (Esencial para modelos GLB) ---
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.5); // Luz general suave
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 2.0); // Luz tipo "sol"
+directionalLight.position.set(5, 10, 7);
+scene.add(directionalLight);
+
+// --- 3. CARGAR EL MODELO .GLB ---
+const loader = new GLTFLoader();
+
+// REEMPLAZA 'ruta/de/tu/modelo.glb' por la ubicación real de tu archivo
+loader.load(
+    'modelo.glb', 
+    function (gltf) {
+        // Esta función se ejecuta cuando el modelo se carga con éxito
+        const model = gltf.scene;
+        scene.add(model);
+        
+        console.log("¡Modelo cargado exitosamente!");
+    }, 
+    function (xhr) {
+        // Opcional: Muestra el progreso de la carga en la consola
+        console.log((xhr.loaded / xhr.total * 100) + '% cargado');
+    }, 
+    function (error) {
+        // Opcional: Si hay un error, lo muestra aquí
+        console.error('Hubo un error al cargar el modelo:', error);
+    }
+);
+
+// --- 4. BUCLE DE ANIMACIÓN ---
 function animate() {
     requestAnimationFrame(animate);
-
-    // Si quieres interactuar libremente, puedes comentar o dejar las rotaciones automáticas
-    cube.rotation.x += 0.005;
-    cube.rotation.y += 0.005;
-
-    // ESENCIAL: Actualiza los controles en cada frame si usas damping
     controls.update();
-
     renderer.render(scene, camera);
 }
-
 animate();
 
-// Ajustar la pantalla si cambias el tamaño de la ventana
+// Ajuste de pantalla
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
