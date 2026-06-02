@@ -6,7 +6,12 @@
     "enabled": true
   },
   "assets": {
-    "directory": "."
+    "directory": ".",
+    "headers": {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+      "Content-Security-Policy": "frame-ancestors 'self' https://opensea.io https://*.opensea.io https://testnets.opensea.io;"
+    }
   },
   "compatibility_flags": [
     "nodejs_compat"
