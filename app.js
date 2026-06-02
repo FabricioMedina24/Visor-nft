@@ -6,36 +6,31 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // 1. OBTENER EL ID DESDE LA URL
 // ==========================================
 const urlParams = new URLSearchParams(window.location.search);
-let modelId = urlParams.get('id');
-
-// Si no pones ?id=X en la URL, por defecto es 1
-if (!modelId) {
-    modelId = '1';
-}
-
-// Ruta exacta hacia tu carpeta y archivo: models/nft1.glb
+let modelId = urlParams.get('id') || '1';
 const modelPath = `models/nft${modelId}.glb`;
 
-console.log(`[Visor] Intentando cargar la ruta: ${modelPath}`);
-
 
 // ==========================================
-// 2. CONFIGURACIÓN DE THREE.JS
+// 2. CONFIGURACIÓN DEL RENDERIZADOR (ACTIVA TEXTURAS)
 // ==========================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111); // Fondo oscuro a juego con tu CSS
+scene.background = new THREE.Color(0x111111);
 
-const camera = new THREE.PerspectiveCamera(
-    75,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    1000
-);
-// Posición inicial temporal de la cámara
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 camera.position.set(0, 2, 5);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ 
+    antialias: true,
+    alpha: false,
+    powerPreference: "high-performance"
+});
 renderer.setSize(window.innerWidth, window.innerHeight);
+
+// --- CONFIGURACIÓN CRÍTICA PARA MAPAS DE TEXTURAS PBR ---
+renderer.toneMapping = THREE.ACESFilmicToneMapping; // Mapeo tonal cinematográfico (colores realistas)
+renderer.toneMappingExposure = 1.0;                // Controla la exposición general de la luz
+renderer.outputColorSpace = THREE.SRGBColorSpace;   // Fuerza el espacio de color correcto para texturas
+
 document.body.appendChild(renderer.domElement);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -44,22 +39,25 @@ controls.dampingFactor = 0.05;
 
 
 // ==========================================
-// 3. ILUMINACIÓN MULTIDIRECCIONAL
+// 3. ILUMINACIÓN AVANZADA (Esencial para Normal/Roughness maps)
 // ==========================================
-const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+// Una luz ambiental suave para rellenar sombras oscuras
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
 scene.add(ambientLight);
 
-const mainLight = new THREE.DirectionalLight(0xffffff, 2.0);
+// Luz principal (actúa como sol, resalta brillos metálicos y rugosidad)
+const mainLight = new THREE.DirectionalLight(0xffffff, 2.5);
 mainLight.position.set(5, 10, 7);
 scene.add(mainLight);
 
-const fillLight = new THREE.DirectionalLight(0xffffff, 1.0);
-fillLight.position.set(-5, 5, -5);
-scene.add(fillLight);
+// Luz de contra (evita que el modelo se vea plano por detrás)
+const backLight = new THREE.DirectionalLight(0xffffff, 1.5);
+backLight.position.set(-5, 5, -5);
+scene.add(backLight);
 
 
 // ==========================================
-// 4. CARGA DEL GLB (Con auto-ajuste de cámara)
+// 4. CARGA DEL GLB (Manteniendo perfiles de color)
 // ==========================================
 const loader = new GLTFLoader();
 
@@ -67,33 +65,44 @@ loader.load(
     modelPath, 
     function (gltf) {
         const model = gltf.scene;
+
+        // Recorremos cada parte del modelo para asegurarnos de que sus materiales
+        // procesen correctamente todos los mapas de texturas 3D importados
+        model.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+                
+                // Si el material tiene texturas asignadas de Blender/Substance, forzamos su espacio de color
+                if (child.material.map) {
+                    child.material.map.colorSpace = THREE.SRGBColorSpace;
+                }
+                
+                // Activa la renderización correcta de mapas normales y de rugosidad
+                child.material.needsUpdate = true;
+            }
+        });
+
         scene.add(model);
+        console.log(`[Éxito] Modelo nft${modelId}.glb y sus texturas cargados.`);
         
-        console.log(`[Éxito] ¡nft${modelId}.glb cargado correctamente!`);
-        
-        // --- AUTO-ENCUADRE: Ajusta la cámara al tamaño real de tu FrogPrince ---
+        // Auto-encuadre de cámara
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
         
-        // Apuntar los controles al centro del NFT
         controls.target.copy(center);
-        
-        // Posicionar la cámara a una distancia perfecta según el tamaño del objeto
         const maxDim = Math.max(size.x, size.y, size.z);
-        camera.position.set(center.x, center.y + (maxDim * 0.3), center.z + (maxDim * 2.2));
+        camera.position.set(center.x, center.y + (maxDim * 0.2), center.z + (maxDim * 2.0));
         camera.lookAt(center);
         
         controls.update();
     }, 
     function (xhr) {
-        if (xhr.total > 0) {
-            console.log(`Cargando NFT ${modelId}: ` + Math.round(xhr.loaded / xhr.total * 100) + '%');
-        }
+        if (xhr.total > 0) console.log(`Cargando: ${Math.round(xhr.loaded / xhr.total * 100)}%`);
     }, 
     function (error) {
-        console.error(`[Error de Carga] No se pudo leer: ${modelPath}`);
-        console.error(error);
+        console.error(`Error al cargar: ${modelPath}`, error);
     }
 );
 
