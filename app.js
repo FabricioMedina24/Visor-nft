@@ -11,10 +11,10 @@ const modelPath = `models/nft${modelId}.glb`;
 
 
 // ==========================================
-// 2. CONFIGURACIÓN DEL RENDERIZADOR PROFESIONAL
+// 2. CONFIGURACIÓN DEL RENDERIZADOR CONTRASTADO
 // ==========================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111); // Tu fondo oscuro
+scene.background = new THREE.Color(0x111111); 
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -25,9 +25,9 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 
-// Configuración de color e iluminación PBR estricta
-renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-renderer.toneMappingExposure = 1.2; // Sube o baja esto si lo ves muy brillante o muy oscuro
+// Mapeo tonal ideal para conservar negros profundos y contrastes
+renderer.toneMapping = THREE.LinearToneMapping; 
+renderer.toneMappingExposure = 1.0; 
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 document.body.appendChild(renderer.domElement);
@@ -38,48 +38,52 @@ controls.dampingFactor = 0.05;
 
 
 // ==========================================
-// 3. ENTORNO DE REFLEJOS AUTOMÁTICO (El truco maestro)
+// 3. MAPA DE ENTORNO SUTIL (Reflejos de metal real)
 // ==========================================
-// Creamos una escena de iluminación ambiental realista para que el metal tenga qué reflejar
+// Generamos un entorno con degradados y variaciones físicas para que el metal tenga reflejos reales con detalle
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
 
-// Generamos un mapa de entorno artificial neutral
 const envScene = new THREE.Scene();
-const lightRoom = new THREE.Mesh(
-    new THREE.BoxGeometry(10, 10, 10),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.BackSide })
-);
-envScene.add(lightRoom);
+// Creamos una estructura que simula un estudio fotográfico oscuro con luces clave flotantes
+const roomGeo = new THREE.BoxGeometry(12, 12, 12);
+const roomMat = new THREE.MeshBasicMaterial({ color: 0x222222, side: THREE.BackSide }); // Paredes oscuras para no lavar el modelo
+const room = new THREE.Mesh(roomGeo, roomMat);
+envScene.add(room);
+
+// Añadimos paneles de luz blanca al "estudio virtual" para que se reflejen como líneas nítidas en el metal dorado
+const lightPanel1 = new THREE.Mesh(new THREE.BoxGeometry(2, 6, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+lightPanel1.position.set(4, 2, 4);
+envScene.add(lightPanel1);
+
+const lightPanel2 = new THREE.Mesh(new THREE.BoxGeometry(6, 2, 0.5), new THREE.MeshBasicMaterial({ color: 0xaaaaaa }));
+lightPanel2.position.set(-4, 4, -2);
+envScene.add(lightPanel2);
 
 const renderTarget = pmremGenerator.fromScene(envScene);
-scene.environment = renderTarget.texture; // <-- Esto activa los reflejos en los mapas 3D
+scene.environment = renderTarget.texture; 
 
 
 // ==========================================
-// 4. ILUMINACIÓN ESTUDIO (Luces de tres puntos)
+// 4. ILUMINACIÓN CONTROLADA (Conserva la atmósfera oscura)
 // ==========================================
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+// Luz ambiental muy baja para mantener las sombras misteriosas y oscuras
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
 scene.add(ambientLight);
 
-// Luz frontal principal
-const mainLight = new THREE.DirectionalLight(0xffffff, 2.5);
-mainLight.position.set(2, 4, 6);
+// Luz principal suave (aporta volumen sin quemar la imagen interna)
+const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+mainLight.position.set(3, 5, 5);
 scene.add(mainLight);
 
-// Luz de relleno lateral (suaviza las sombras negras quemadas)
-const fillLight = new THREE.DirectionalLight(0xffffff, 1.5);
-fillLight.position.set(-6, 2, 2);
-scene.add(fillLight);
-
-// Luz de contra superior (resalta los bordes dorados de arriba)
-const topLight = new THREE.DirectionalLight(0xffffff, 2.0);
-topLight.position.set(0, 8, -4);
-scene.add(topLight);
+// Luz de recorte trasera (da un sutil destello en los relieves dorados traseros)
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.8);
+rimLight.position.set(-3, 3, -4);
+scene.add(rimLight);
 
 
 // ==========================================
-// 5. CARGA DEL GLB CON CONFIGURACIÓN DE MATERIALES
+// 5. CARGA DEL GLB Y RE-AJUSTE DE MATERIALES PBR
 // ==========================================
 const loader = new GLTFLoader();
 
@@ -88,28 +92,31 @@ loader.load(
     function (gltf) {
         const model = gltf.scene;
 
-        // Recorremos el modelo para configurar de forma agresiva cada textura
         model.traverse((child) => {
             if (child.isMesh) {
-                // Forzar texturas al espacio sRGB correcto
                 if (child.material.map) {
                     child.material.map.colorSpace = THREE.SRGBColorSpace;
                 }
                 
-                // Si el modelo incluye mapas de normales o rugosidad, nos aseguramos de que se activen
-                if (child.material.normalMap) child.material.normalScale.set(1, 1);
-                if (child.material.roughnessMap) child.material.roughness = 1.0;
+                // Mantenemos la configuración original de texturas que hiciste en tu software de 3D
+                if (child.material.roughnessMap) {
+                    // Si tiene mapa de rugosidad, dejamos que la textura controle el brillo plástico
+                    child.material.roughness = 1.0; 
+                } else {
+                    // Si no tiene mapa, le damos un toque intermedio para que no parezca espejo ni plástico flojo
+                    child.material.roughness = 0.4; 
+                }
                 
-                // Permitir que el material use el entorno de reflejos que creamos arriba
-                child.material.envMapIntensity = 1.5; // Ajusta la intensidad del reflejo en el metal
+                // Controlamos qué tan fuerte impacta nuestro entorno en los reflejos del oro
+                child.material.envMapIntensity = 1.0; 
                 child.material.needsUpdate = true;
             }
         });
 
         scene.add(model);
-        console.log(`[Éxito] Modelo nft${modelId}.glb renderizado en alta definición.`);
+        console.log(`[Éxito] Modelo nft${modelId}.glb renderizado con balance de contraste.`);
         
-        // Auto-encuadre perfecto
+        // Auto-encuadre
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
