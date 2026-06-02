@@ -11,10 +11,10 @@ const modelPath = `models/nft${modelId}.glb`;
 
 
 // ==========================================
-// 2. CONFIGURACIÓN DEL RENDERIZADOR PROFESIONAL
+// 2. CONFIGURACIÓN DEL RENDERIZADOR (ESTÁNDAR PBR)
 // ==========================================
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111111); 
+scene.background = new THREE.Color(0x111111); // Fondo oscuro elegante
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -26,7 +26,7 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 
 renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-renderer.toneMappingExposure = 1.2; 
+renderer.toneMappingExposure = 1.3; // Exposición perfecta para resaltar el oro
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 document.body.appendChild(renderer.domElement);
@@ -72,7 +72,28 @@ startAutoRotation();
 
 
 // ==========================================
-// 3. GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
+// 3. CARGA MANUAL DE TUS 3 TEXTURAS (MÉTODO ULTRA SEGURO)
+// ==========================================
+const textureLoader = new THREE.TextureLoader();
+
+// Carga del mapa de color base
+const baseColorTex = textureLoader.load('textures/DefaultMaterial_baseColor.png');
+baseColorTex.colorSpace = THREE.SRGBColorSpace; // Espacio sRGB para que los colores no se laven
+baseColorTex.flipY = false; // GLTF usa el eje Y invertido, desactivamos flipY para alinearlo
+
+// Carga del mapa de normales (relieve)
+const normalTex = textureLoader.load('textures/DefaultMaterial_normal.png');
+normalTex.colorSpace = THREE.NoColorSpace; // Las normales son datos vectoriales, no llevan sRGB
+normalTex.flipY = false;
+
+// Carga del mapa ORM empaquetado (Oclusión, Rugosidad, Metal)
+const ormTex = textureLoader.load('textures/DefaultMaterial_occlusionRoughnessMetallic.png');
+ormTex.colorSpace = THREE.NoColorSpace; // Datos físicos puros
+ormTex.flipY = false;
+
+
+// ==========================================
+// 4. GENERACIÓN DE ENTORNO HDRI DE ESTUDIO REAL
 // ==========================================
 const pmremGenerator = new THREE.PMREMGenerator(renderer);
 pmremGenerator.compileEquirectangularShader();
@@ -96,4 +117,5 @@ scene.environment = renderTarget.texture;
 
 
 // ==========================================
-// 4. LUC
+// 5. ILUMINACIÓN DIRECTA DE RELLENO
+// =================
