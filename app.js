@@ -3,12 +3,11 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 // ==========================================
-// 1. OBTENER EL ID DESDE LA URL
+// 1. OBTENER EL ID DESDE LA URL (DINÁMICO)
 // ==========================================
 const urlParams = new URLSearchParams(window.location.search);
 let modelId = urlParams.get('id') || '1';
 const modelPath = `models/nft${modelId}.glb`;
-
 
 // ==========================================
 // 2. CONFIGURACIÓN DEL RENDERIZADOR NATIVO
@@ -35,10 +34,7 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-
-// ==========================================
 // LÓGICA DE ROTACIÓN AUTOMÁTICA POR INACTIVIDAD
-// ==========================================
 let isUserInteracting = false;
 let autoRotateTimeout;
 
@@ -64,12 +60,8 @@ controls.addEventListener('start', () => {
     clearTimeout(autoRotateTimeout);
 });
 
-controls.addEventListener('end', () => {
-    resetInactivityTimer();
-});
-
+controls.addEventListener('end', () => { resetInactivityTimer(); });
 startAutoRotation();
-
 
 // ==========================================
 // 3. GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
@@ -94,7 +86,6 @@ envScene.add(studioLight2);
 const renderTarget = pmremGenerator.fromScene(envScene);
 scene.environment = renderTarget.texture;
 
-
 // ==========================================
 // 4. SISTEMA DE ILUMINACIÓN VINCULADA A LA CÁMARA
 // ==========================================
@@ -103,13 +94,11 @@ scene.add(ambientLight);
 
 const cameraLight = new THREE.DirectionalLight(0xffffff, 1.5); 
 cameraLight.position.set(2, 3, 4); 
-
 camera.add(cameraLight);
 scene.add(camera); 
 
-
 // ==========================================
-// 5. CARGA AUTÓNOMA DE MATERIALES NATIVOS
+// 5. CARGA AUTÓNOMA DE MATERIALES (.GLB DINÁMICO)
 // ==========================================
 const loader = new GLTFLoader();
 
@@ -117,22 +106,16 @@ loader.load(
     modelPath, 
     function (gltf) {
         const model = gltf.scene;
-
         model.traverse((child) => {
             if (child.isMesh) {
                 const mat = child.material;
-
-                if (mat.map) {
-                    mat.map.colorSpace = THREE.SRGBColorSpace;
-                }
-
+                if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
                 mat.envMapIntensity = 2.2; 
                 mat.needsUpdate = true;
             }
         });
 
         scene.add(model);
-        console.log(`[Éxito] Modelo nft${modelId}.glb cargado con luz interactiva.`);
         
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
@@ -146,20 +129,14 @@ loader.load(
 
         camera.position.set(center.x, center.y, center.z + (maxDim * 1.8));
         camera.lookAt(center);
-        
         controls.update();
     }, 
-    function (xhr) {
-        if (xhr.total > 0) console.log(`Cargando modelo: ${Math.round(xhr.loaded / xhr.total * 100)}%`);
-    }, 
-    function (error) {
-        console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
-    }
+    function (xhr) { if (xhr.total > 0) console.log(`Cargando: ${Math.round(xhr.loaded / xhr.total * 100)}%`); }, 
+    function (error) { console.error(`Error al cargar el archivo .glb: ${modelPath}`, error); }
 );
 
-
 // ==========================================
-// 6. ANIMACIÓN Y RESPONSIVIDAD (PARCHE OPENSEA)
+// 6. ANIMACIÓN Y RESPONSIVIDAD (PARCHE TOTAL)
 // ==========================================
 function animate() {
     requestAnimationFrame(animate);
@@ -168,11 +145,9 @@ function animate() {
 }
 animate();
 
-// Fuerza a Three.js a calcular el tamaño real de la ventana del iframe
 function resizeViewer() {
     const width = window.innerWidth || document.documentElement.clientWidth;
     const height = window.innerHeight || document.documentElement.clientHeight;
-    
     if (width > 0 && height > 0) {
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
@@ -181,8 +156,6 @@ function resizeViewer() {
 }
 
 window.addEventListener('resize', resizeViewer);
-
-// Reajusta el tamaño en momentos clave del arranque para romper la caché del marco colapsado
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(resizeViewer, 100);
     setTimeout(resizeViewer, 500);

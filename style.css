@@ -4,14 +4,14 @@ html, body {
     width: 100% !important;
     height: 100% !important;
     overflow: hidden;
-    background-color: #111111 !important; /* Mantiene tu fondo oscuro */
+    background-color: #111111 !important;
 }
 
 canvas {
-    display: block;
-    width: 100vw !important;  /* Fuerza el ancho total del cuadro de OpenSea */
-    height: 100vh !important; /* Fuerza el alto total del cuadro de OpenSea */
-    position: absolute;
-    top: 0;
-    left: 0;
+    display: block !important;
+    width: 100vw !important;  
+    height: 100vh !important; 
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
 }
