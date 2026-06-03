@@ -2,9 +2,6 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "visor-nft",
   "compatibility_date": "2026-06-02",
-  "observability": {
-    "enabled": true
-  },
   "assets": {
     "directory": ".",
     "headers": {
@@ -12,8 +9,5 @@
       "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
       "Content-Security-Policy": "frame-ancestors 'self' https://opensea.io https://*.opensea.io https://testnets.opensea.io;"
     }
-  },
-  "compatibility_flags": [
-    "nodejs_compat"
-  ]
+  }
 }

@@ -7,7 +7,10 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // ==========================================
 const urlParams = new URLSearchParams(window.location.search);
 let modelId = urlParams.get('id') || '1';
-const modelPath = `models/nft${modelId}.glb`;
+
+// Usamos la ruta absoluta de tu web para que OpenSea no se pierda buscando carpetas locales
+const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
+
 
 // ==========================================
 // 2. CONFIGURACIÓN DEL RENDERIZADOR NATIVO
@@ -34,7 +37,10 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
+
+// ==========================================
 // LÓGICA DE ROTACIÓN AUTOMÁTICA POR INACTIVIDAD
+// ==========================================
 let isUserInteracting = false;
 let autoRotateTimeout;
 
@@ -60,8 +66,12 @@ controls.addEventListener('start', () => {
     clearTimeout(autoRotateTimeout);
 });
 
-controls.addEventListener('end', () => { resetInactivityTimer(); });
+controls.addEventListener('end', () => {
+    resetInactivityTimer();
+});
+
 startAutoRotation();
+
 
 // ==========================================
 // 3. GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
@@ -86,6 +96,7 @@ envScene.add(studioLight2);
 const renderTarget = pmremGenerator.fromScene(envScene);
 scene.environment = renderTarget.texture;
 
+
 // ==========================================
 // 4. SISTEMA DE ILUMINACIÓN VINCULADA A LA CÁMARA
 // ==========================================
@@ -94,11 +105,13 @@ scene.add(ambientLight);
 
 const cameraLight = new THREE.DirectionalLight(0xffffff, 1.5); 
 cameraLight.position.set(2, 3, 4); 
+
 camera.add(cameraLight);
 scene.add(camera); 
 
+
 // ==========================================
-// 5. CARGA AUTÓNOMA DE MATERIALES (.GLB DINÁMICO)
+// 5. CARGA DESDE LA RUTA ABSOLUTA
 // ==========================================
 const loader = new GLTFLoader();
 
@@ -106,16 +119,22 @@ loader.load(
     modelPath, 
     function (gltf) {
         const model = gltf.scene;
+
         model.traverse((child) => {
             if (child.isMesh) {
                 const mat = child.material;
-                if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+
+                if (mat.map) {
+                    mat.map.colorSpace = THREE.SRGBColorSpace;
+                }
+
                 mat.envMapIntensity = 2.2; 
                 mat.needsUpdate = true;
             }
         });
 
         scene.add(model);
+        console.log(`[Éxito] Modelo cargado con éxito.`);
         
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
@@ -129,14 +148,20 @@ loader.load(
 
         camera.position.set(center.x, center.y, center.z + (maxDim * 1.8));
         camera.lookAt(center);
+        
         controls.update();
     }, 
-    function (xhr) { if (xhr.total > 0) console.log(`Cargando: ${Math.round(xhr.loaded / xhr.total * 100)}%`); }, 
-    function (error) { console.error(`Error al cargar el archivo .glb: ${modelPath}`, error); }
+    function (xhr) {
+        if (xhr.total > 0) console.log(`Cargando: ${Math.round(xhr.loaded / xhr.total * 100)}%`);
+    }, 
+    function (error) {
+        console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
+    }
 );
 
+
 // ==========================================
-// 6. ANIMACIÓN Y RESPONSIVIDAD (PARCHE TOTAL)
+// 6. ANIMACIÓN Y RESPONSIVIDAD FORZADA
 // ==========================================
 function animate() {
     requestAnimationFrame(animate);
@@ -148,6 +173,7 @@ animate();
 function resizeViewer() {
     const width = window.innerWidth || document.documentElement.clientWidth;
     const height = window.innerHeight || document.documentElement.clientHeight;
+    
     if (width > 0 && height > 0) {
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
@@ -156,8 +182,10 @@ function resizeViewer() {
 }
 
 window.addEventListener('resize', resizeViewer);
+
+// Reajuste continuo durante el primer segundo para romper el bug de OpenSea
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(resizeViewer, 100);
     setTimeout(resizeViewer, 500);
-    setTimeout(resizeViewer, 1500);
+    setTimeout(resizeViewer, 1200);
 });
