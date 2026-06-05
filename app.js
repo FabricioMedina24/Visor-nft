@@ -2,7 +2,14 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// Usamos requestAnimationFrame para obligar al navegador a renderizar primero el anillo HTML
+// Importaciones requeridas para el canal de Bloom cinematográfico
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+let composer; // Variable global para el motor de efectos
+
 requestAnimationFrame(() => {
     setTimeout(inicializarVisor3D, 50);
 });
@@ -17,7 +24,7 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111111); 
+    scene.background = new THREE.Color(0x0b0b0b); // Un negro un poco más profundo para resaltar el Bloom
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
 
@@ -29,7 +36,7 @@ function inicializarVisor3D() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-    renderer.toneMappingExposure = 1.25; 
+    renderer.toneMappingExposure = 1.15; // Ajustado levemente para balancear el brillo del Bloom
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     document.body.appendChild(renderer.domElement);
@@ -70,13 +77,29 @@ function inicializarVisor3D() {
 
     startAutoRotation();
 
+    // ==========================================
+    // CONFIGURACIÓN DEL CANAL DE POST-PROCESAMIENTO (BLOOM)
+    // ==========================================
+    const renderScene = new RenderPass(scene, camera);
+    
+    // Configuración calibrada para el resplandor de oro imperial:
+    // Parámetros: (resolución de pantalla, fuerza del brillo, radio de esparcido, umbral de activación)
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.1, 0.45, 0.25);
+    
+    const outputPass = new OutputPass();
+
+    composer = new EffectComposer(renderer);
+    composer.addPass(renderScene);
+    composer.addPass(bloomPass); // Inyectamos el filtro de resplandor dorado
+    composer.addPass(outputPass);
+
     // GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
 
     const envScene = new THREE.Scene();
     const roomGeo = new THREE.SphereGeometry(15, 32, 16);
-    const roomMat = new THREE.MeshBasicMaterial({ color: 0x555555, side: THREE.BackSide }); 
+    const roomMat = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.BackSide }); 
     const room = new THREE.Mesh(roomGeo, roomMat);
     envScene.add(room);
 
@@ -92,10 +115,10 @@ function inicializarVisor3D() {
     scene.environment = renderTarget.texture;
 
     // SISTEMA DE ILUMINACIÓN VINCULADA A LA CÁMARA
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4); 
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35); 
     scene.add(ambientLight);
 
-    const cameraLight = new THREE.DirectionalLight(0xffffff, 1.5); 
+    const cameraLight = new THREE.DirectionalLight(0xffffff, 1.4); 
     cameraLight.position.set(2, 3, 4); 
 
     camera.add(cameraLight);
@@ -114,7 +137,9 @@ function inicializarVisor3D() {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
-                    mat.envMapIntensity = 2.2; 
+                    
+                    // Incrementamos sutilmente la reacción metálica para alimentar el filtro Bloom
+                    mat.envMapIntensity = 2.4; 
                     mat.needsUpdate = true;
                 }
             });
@@ -140,7 +165,6 @@ function inicializarVisor3D() {
             controls.minDistance = maxDim * 0.15; 
             controls.maxDistance = maxDim * 4.0; 
 
-            // ZOOM ACERCADO JUSTO A LA MITAD (0.95)
             camera.position.set(center.x, center.y, center.z + (maxDim * 0.95));
             camera.lookAt(center);
             
@@ -156,10 +180,20 @@ function inicializarVisor3D() {
         }
     );
 
+    // ==========================================
+    // BUCLE DE ANIMACIÓN UTILIZANDO COMPOSER
+    // ==========================================
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 
-        renderer.render(scene, camera);
+        
+        // En lugar de usar renderer.render, usamos composer.render 
+        // para que dibuje la escena pasando a través del filtro de resplandor Bloom
+        if (composer) {
+            composer.render();
+        } else {
+            renderer.render(scene, camera);
+        }
     }
     animate();
 
@@ -170,6 +204,9 @@ function inicializarVisor3D() {
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            
+            // Forzamos al motor de efectos a reajustar su resolución al tamaño de la pantalla
+            if (composer) composer.setSize(width, height);
         }
     }
 
