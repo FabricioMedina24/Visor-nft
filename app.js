@@ -10,9 +10,6 @@ let modelId = urlParams.get('id') || '1';
 
 const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
-// Elemento del cargador
-const loaderContainer = document.getElementById('loader-container');
-
 // ==========================================
 // 2. CONFIGURACIÓN DEL RENDERIZADOR NATIVO
 // ==========================================
@@ -38,9 +35,9 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-// ===========================================
+// ==========================================
 // LÓGICA DE ROTACIÓN AUTOMÁTICA POR INACTIVIDAD
-// ===========================================
+// ==========================================
 let isUserInteracting = false;
 let autoRotateTimeout;
 
@@ -108,7 +105,7 @@ camera.add(cameraLight);
 scene.add(camera); 
 
 // ==========================================
-// 5. CARGA DESDE LA RUTA ABSOLUTA (CON PARCHE CORS)
+// 5. CARGA DESDE LA RUTA ABSOLUTA CON DETECTOR DE CARGA
 // ==========================================
 const loader = new GLTFLoader();
 loader.setCrossOrigin('anonymous');
@@ -134,11 +131,15 @@ loader.load(
         scene.add(model);
         console.log(`[Éxito] Modelo cargado con éxito.`);
         
-        // OCULTAR LOGO DE CARGA SUAVEMENTE
+        // APAGAR EL ANILLO DE CARGA DE FORMA SUAVE
+        const loaderContainer = document.getElementById('loader-container');
         if (loaderContainer) {
             loaderContainer.style.opacity = '0';
+            setTimeout(() => {
+                loaderContainer.style.display = 'none';
+            }, 500);
         }
-
+        
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
@@ -149,7 +150,7 @@ loader.load(
         controls.minDistance = maxDim * 0.15; 
         controls.maxDistance = maxDim * 4.0; 
 
-        // ZOOM REAJUSTADO: Cambiado de 1.8 a 0.95 para que aparezca a la mitad de distancia (más cerca)
+        // AJUSTE DEL ZOOM EN PRIMERA PERSONA: Reducido a 0.95 para que aparezca mucho más cerca (a la mitad)
         camera.position.set(center.x, center.y, center.z + (maxDim * 0.95));
         camera.lookAt(center);
         
@@ -160,8 +161,8 @@ loader.load(
     }, 
     function (error) {
         console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
-        const loadingText = document.querySelector('.loading-text');
-        if (loadingText) loadingText.innerText = 'Error al cargar 3D';
+        const textElement = document.querySelector('.loading-text');
+        if (textElement) textElement.innerText = "Error al conectar al modelo";
     }
 );
 
