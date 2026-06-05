@@ -38,9 +38,9 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
-// ==========================================
+// ===========================================
 // LÓGICA DE ROTACIÓN AUTOMÁTICA POR INACTIVIDAD
-// ==========================================
+// ===========================================
 let isUserInteracting = false;
 let autoRotateTimeout;
 
