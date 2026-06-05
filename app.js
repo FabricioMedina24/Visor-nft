@@ -24,9 +24,9 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0b0b);
+    scene.background = new THREE.Color(0x0b0b0b); // Un negro un poco más profundo para resaltar el Bloom
 
-    // AJUSTE: Aumentado near a 0.1 para mayor estabilidad y evitar clipping
+    // AJUSTE: near aumentado a 0.1 para evitar clipping (cámara atravesando geometría)
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -37,7 +37,7 @@ function inicializarVisor3D() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.15; // Ajustado levemente para balancear el brillo del Bloom
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     document.body.appendChild(renderer.domElement);
@@ -79,31 +79,50 @@ function inicializarVisor3D() {
     startAutoRotation();
 
     // ==========================================
-    // CONFIGURACIÓN DEL CANAL DE POST-PROCESAMIENTO
+    // CONFIGURACIÓN DEL CANAL DE POST-PROCESAMIENTO (BLOOM)
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.1, 0.45, 0.25);
+    
+    // Configuración calibrada (Sutil para evitar el aspecto cuadrado)
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
+    
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
     composer.addPass(renderScene);
-    composer.addPass(bloomPass);
+    composer.addPass(bloomPass); // Inyectamos el filtro de resplandor dorado
     composer.addPass(outputPass);
 
-    // GENERACIÓN DE ENTORNO
+    // GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
-    const envScene = new THREE.Scene();
-    const room = new THREE.Mesh(new THREE.SphereGeometry(15, 32, 16), new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.BackSide }));
-    envScene.add(room);
-    scene.environment = pmremGenerator.fromScene(envScene).texture;
 
-    // ILUMINACIÓN
-    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
-    const cameraLight = new THREE.DirectionalLight(0xffffff, 1.4);
-    cameraLight.position.set(2, 3, 4);
+    const envScene = new THREE.Scene();
+    const roomGeo = new THREE.SphereGeometry(15, 32, 16);
+    const roomMat = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.BackSide }); 
+    const room = new THREE.Mesh(roomGeo, roomMat);
+    envScene.add(room);
+
+    const studioLight1 = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    studioLight1.position.set(6, 4, 5);
+    envScene.add(studioLight1);
+
+    const studioLight2 = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 0.5), new THREE.MeshBasicMaterial({ color: 0x888888 }));
+    studioLight2.position.set(-6, 6, -3);
+    envScene.add(studioLight2);
+
+    const renderTarget = pmremGenerator.fromScene(envScene);
+    scene.environment = renderTarget.texture;
+
+    // SISTEMA DE ILUMINACIÓN VINCULADA A LA CÁMARA
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35); 
+    scene.add(ambientLight);
+
+    const cameraLight = new THREE.DirectionalLight(0xffffff, 1.4); 
+    cameraLight.position.set(2, 3, 4); 
+
     camera.add(cameraLight);
-    scene.add(camera);
+    scene.add(camera); 
 
     // CARGA DEL MODELO 3D
     const loader = new GLTFLoader();
@@ -113,41 +132,62 @@ function inicializarVisor3D() {
         modelPath, 
         function (gltf) {
             const model = gltf.scene;
+
             model.traverse((child) => {
                 if (child.isMesh) {
-                    child.material.envMapIntensity = 2.4;
-                    child.material.needsUpdate = true;
+                    const mat = child.material;
+                    if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+                    
+                    mat.envMapIntensity = 1.0; // Reducido para mayor sutileza
+                    mat.needsUpdate = true;
                 }
             });
+
             scene.add(model);
             
+            // BORRAR EL CONTENEDOR DEL ANILLO DE CARGA DE FORMA SUAVE
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
-                setTimeout(() => { loaderContainer.remove(); }, 400);
+                setTimeout(() => {
+                    loaderContainer.remove();
+                }, 400);
             }
             
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
             
             controls.target.copy(center);
+            const maxDim = Math.max(size.x, size.y, size.z);
             
-            // AJUSTE FINAL: minDistance impide que la cámara entre al objeto
+            // AJUSTE: minDistance más amplia para evitar que la cámara penetre la geometría
             controls.minDistance = maxDim * 0.6; 
             controls.maxDistance = maxDim * 4.0; 
 
-            // AJUSTE FINAL: Zoom inicial más cercano (0.85)
-            camera.position.set(center.x, center.y, center.z + (maxDim * 0.85));
+            // Posicionamiento inicial seguro de la cámara
+            camera.position.set(center.x, center.y, center.z + (maxDim * 1.2));
             camera.lookAt(center);
+            
             controls.update();
+        }, 
+        function (xhr) {
+            // Progreso de carga
+        }, 
+        function (error) {
+            console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
+            const textElement = document.querySelector('.loading-text');
+            if (textElement) textElement.innerText = "Error al conectar al modelo";
         }
     );
 
+    // ==========================================
+    // BUCLE DE ANIMACIÓN UTILIZANDO COMPOSER
+    // ==========================================
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 
+        
         if (composer) {
             composer.render();
         } else {
@@ -157,14 +197,17 @@ function inicializarVisor3D() {
     animate();
 
     function resizeViewer() {
-        const width = window.innerWidth, height = window.innerHeight;
+        const width = window.innerWidth || document.documentElement.clientWidth;
+        const height = window.innerHeight || document.documentElement.clientHeight;
         if (width > 0 && height > 0) {
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            
             if (composer) composer.setSize(width, height);
         }
     }
+
     window.addEventListener('resize', resizeViewer);
     resizeViewer();
 }
