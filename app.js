@@ -10,6 +10,9 @@ let modelId = urlParams.get('id') || '1';
 
 const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
+// Elemento del cargador
+const loaderContainer = document.getElementById('loader-container');
+
 // ==========================================
 // 2. CONFIGURACIÓN DEL RENDERIZADOR NATIVO
 // ==========================================
@@ -108,7 +111,6 @@ scene.add(camera);
 // 5. CARGA DESDE LA RUTA ABSOLUTA (CON PARCHE CORS)
 // ==========================================
 const loader = new GLTFLoader();
-// Le ordenamos al cargador que solicite las ranas de forma anónima para aceptar origen nulo
 loader.setCrossOrigin('anonymous');
 
 loader.load(
@@ -132,6 +134,11 @@ loader.load(
         scene.add(model);
         console.log(`[Éxito] Modelo cargado con éxito.`);
         
+        // OCULTAR LOGO DE CARGA SUAVEMENTE
+        if (loaderContainer) {
+            loaderContainer.style.opacity = '0';
+        }
+
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
@@ -142,7 +149,8 @@ loader.load(
         controls.minDistance = maxDim * 0.15; 
         controls.maxDistance = maxDim * 4.0; 
 
-        camera.position.set(center.x, center.y, center.z + (maxDim * 1.8));
+        // ZOOM REAJUSTADO: Cambiado de 1.8 a 0.95 para que aparezca a la mitad de distancia (más cerca)
+        camera.position.set(center.x, center.y, center.z + (maxDim * 0.95));
         camera.lookAt(center);
         
         controls.update();
@@ -152,6 +160,8 @@ loader.load(
     }, 
     function (error) {
         console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
+        const loadingText = document.querySelector('.loading-text');
+        if (loadingText) loadingText.innerText = 'Error al cargar 3D';
     }
 );
 
