@@ -8,9 +8,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 const urlParams = new URLSearchParams(window.location.search);
 let modelId = urlParams.get('id') || '1';
 
-// Usamos la ruta absoluta de tu web para que OpenSea no se pierda buscando carpetas locales
 const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
-
 
 // ==========================================
 // 2. CONFIGURACIÓN DEL RENDERIZADOR NATIVO
@@ -36,7 +34,6 @@ document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
-
 
 // ==========================================
 // LÓGICA DE ROTACIÓN AUTOMÁTICA POR INACTIVIDAD
@@ -72,7 +69,6 @@ controls.addEventListener('end', () => {
 
 startAutoRotation();
 
-
 // ==========================================
 // 3. GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
 // ==========================================
@@ -96,7 +92,6 @@ envScene.add(studioLight2);
 const renderTarget = pmremGenerator.fromScene(envScene);
 scene.environment = renderTarget.texture;
 
-
 // ==========================================
 // 4. SISTEMA DE ILUMINACIÓN VINCULADA A LA CÁMARA
 // ==========================================
@@ -109,11 +104,12 @@ cameraLight.position.set(2, 3, 4);
 camera.add(cameraLight);
 scene.add(camera); 
 
-
 // ==========================================
-// 5. CARGA DESDE LA RUTA ABSOLUTA
+// 5. CARGA DESDE LA RUTA ABSOLUTA (CON PARCHE CORS)
 // ==========================================
 const loader = new GLTFLoader();
+// Le ordenamos al cargador que solicite las ranas de forma anónima para aceptar origen nulo
+loader.setCrossOrigin('anonymous');
 
 loader.load(
     modelPath, 
@@ -159,7 +155,6 @@ loader.load(
     }
 );
 
-
 // ==========================================
 // 6. ANIMACIÓN Y RESPONSIVIDAD FORZADA
 // ==========================================
@@ -183,7 +178,6 @@ function resizeViewer() {
 
 window.addEventListener('resize', resizeViewer);
 
-// Reajuste continuo durante el primer segundo para romper el bug de OpenSea
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(resizeViewer, 100);
     setTimeout(resizeViewer, 500);
