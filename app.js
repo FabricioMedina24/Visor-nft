@@ -26,7 +26,7 @@ function inicializarVisor3D() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b0b0b);
 
-    // AJUSTE: near aumentado a 0.1 para evitar que la cámara atraviese el objeto
+    // AJUSTE: Aumentamos el plano cercano (near) de 0.01 a 0.1 para evitar el clipping
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -83,7 +83,7 @@ function inicializarVisor3D() {
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
     
-    // AJUSTES: Strength 0.25 (sutil), Radius 0.4, Threshold 0.5 (solo brilla lo intenso)
+    // Ajustes: Strength 0.25 (sutil), Radius 0.4, Threshold 0.5 (más selectivo)
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
     
     const outputPass = new OutputPass();
@@ -137,7 +137,7 @@ function inicializarVisor3D() {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
-                    mat.envMapIntensity = 1.0; // Ajuste para sutileza
+                    mat.envMapIntensity = 1.0; // Ajuste para mayor sutileza
                     mat.needsUpdate = true;
                 }
             });
@@ -157,7 +157,7 @@ function inicializarVisor3D() {
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // AJUSTE: minDistance mayor para evitar que la cámara entre al objeto
+            // AJUSTE: minDistance incrementada a 0.4 para evitar que la cámara se acerque demasiado
             controls.minDistance = maxDim * 0.4; 
             controls.maxDistance = maxDim * 4.0; 
 
