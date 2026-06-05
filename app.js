@@ -26,7 +26,8 @@ function inicializarVisor3D() {
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b0b0b);
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
+    // AJUSTE: near aumentado a 0.1 para evitar que la cámara atraviese el objeto
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     const renderer = new THREE.WebGLRenderer({ 
         antialias: true, 
@@ -78,13 +79,12 @@ function inicializarVisor3D() {
     startAutoRotation();
 
     // ==========================================
-    // CONFIGURACIÓN DEL CANAL DE BLOOM (AJUSTADO PARA SUAVIDAD)
+    // CONFIGURACIÓN DEL CANAL DE BLOOM (SUTIL)
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
     
-    // Ajustes para eliminar el aspecto "cuadrado" o "pixelado":
-    // El radio aumentado ayuda a suavizar las formas del resplandor.
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.8, 0.4);
+    // AJUSTES: Strength 0.25 (sutil), Radius 0.4, Threshold 0.5 (solo brilla lo intenso)
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
     
     const outputPass = new OutputPass();
 
@@ -137,7 +137,7 @@ function inicializarVisor3D() {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
-                    mat.envMapIntensity = 1.2; // Reducido para evitar el "quemado" cuadrado
+                    mat.envMapIntensity = 1.0; // Ajuste para sutileza
                     mat.needsUpdate = true;
                 }
             });
@@ -157,11 +157,13 @@ function inicializarVisor3D() {
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            controls.minDistance = maxDim * 0.15; 
+            // AJUSTE: minDistance mayor para evitar que la cámara entre al objeto
+            controls.minDistance = maxDim * 0.4; 
             controls.maxDistance = maxDim * 4.0; 
 
             camera.position.set(center.x, center.y, center.z + (maxDim * 0.95));
             camera.lookAt(center);
+            
             controls.update();
         }, 
         null, 
