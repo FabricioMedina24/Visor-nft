@@ -24,7 +24,7 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0b0b); // Un negro un poco más profundo para resaltar el Bloom
+    scene.background = new THREE.Color(0x0b0b0b);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
 
@@ -36,7 +36,7 @@ function inicializarVisor3D() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-    renderer.toneMappingExposure = 1.15; // Ajustado levemente para balancear el brillo del Bloom
+    renderer.toneMappingExposure = 1.15;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     document.body.appendChild(renderer.domElement);
@@ -78,19 +78,21 @@ function inicializarVisor3D() {
     startAutoRotation();
 
     // ==========================================
-    // CONFIGURACIÓN DEL CANAL DE POST-PROCESAMIENTO (BLOOM)
+    // CONFIGURACIÓN DEL CANAL DE BLOOM (AJUSTADO A SUTIL)
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
     
-    // Configuración calibrada para el resplandor de oro imperial:
-    // Parámetros: (resolución de pantalla, fuerza del brillo, radio de esparcido, umbral de activación)
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.1, 0.45, 0.25);
+    // Parámetros ajustados para mayor sutileza:
+    // Strength: 0.35 (Reducido de 1.1)
+    // Radius: 0.4
+    // Threshold: 0.4 (Aumentado para que solo las luces más fuertes brillen)
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.4, 0.4);
     
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
     composer.addPass(renderScene);
-    composer.addPass(bloomPass); // Inyectamos el filtro de resplandor dorado
+    composer.addPass(bloomPass);
     composer.addPass(outputPass);
 
     // GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
@@ -138,15 +140,14 @@ function inicializarVisor3D() {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
                     
-                    // Incrementamos sutilmente la reacción metálica para alimentar el filtro Bloom
-                    mat.envMapIntensity = 2.4; 
+                    // Intensidad reducida para un brillo más realista y menos artificial
+                    mat.envMapIntensity = 1.2; 
                     mat.needsUpdate = true;
                 }
             });
 
             scene.add(model);
             
-            // BORRAR EL CONTENEDOR DEL ANILLO DE CARGA DE FORMA SUAVE
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
@@ -170,9 +171,7 @@ function inicializarVisor3D() {
             
             controls.update();
         }, 
-        function (xhr) {
-            // Progreso de carga
-        }, 
+        null, 
         function (error) {
             console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
             const textElement = document.querySelector('.loading-text');
@@ -180,15 +179,11 @@ function inicializarVisor3D() {
         }
     );
 
-    // ==========================================
-    // BUCLE DE ANIMACIÓN UTILIZANDO COMPOSER
-    // ==========================================
+    // BUCLE DE ANIMACIÓN
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 
         
-        // En lugar de usar renderer.render, usamos composer.render 
-        // para que dibuje la escena pasando a través del filtro de resplandor Bloom
         if (composer) {
             composer.render();
         } else {
@@ -205,7 +200,6 @@ function inicializarVisor3D() {
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
             
-            // Forzamos al motor de efectos a reajustar su resolución al tamaño de la pantalla
             if (composer) composer.setSize(width, height);
         }
     }
