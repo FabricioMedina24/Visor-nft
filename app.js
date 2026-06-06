@@ -161,12 +161,12 @@ function inicializarVisor3D() {
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // AJUSTE: minDistance más amplia para evitar que la cámara penetre la geometría
-            controls.minDistance = maxDim * 0.6; 
+            // MODIFICADO: minDistance intermedio para permitir un zoom más cercano por parte del usuario
+            controls.minDistance = maxDim * 0.45; 
             controls.maxDistance = maxDim * 4.0; 
 
-            // Posicionamiento inicial seguro de la cámara
-            camera.position.set(center.x, center.y, center.z + (maxDim * 1.2));
+            // MODIFICADO: Ajuste intermedio (0.9). El modelo se verá más grande y cerca al iniciar sin recortarse.
+            camera.position.set(center.x, center.y, center.z + (maxDim * 0.9));
             camera.lookAt(center);
             
             controls.update();
