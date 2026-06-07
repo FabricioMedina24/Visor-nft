@@ -8,9 +8,9 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-let composer; // Variable global para el motor de efectos
-let sparkles, sparkleGeometry; // NUEVO: Variables para el sistema de partículas
-let sparkleOpacities = [];    // NUEVO: Almacenará el estado de titileo (opacidad individual) de cada estrella
+let composer; 
+let sparkles, sparkleGeometry; 
+let sparkleOpacities = [];    
 
 requestAnimationFrame(() => {
     setTimeout(inicializarVisor3D, 50);
@@ -26,9 +26,8 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0b0b); // Un negro un poco más profundo para resaltar el Bloom
+    scene.background = new THREE.Color(0x0b0b0b); 
 
-    // AJUSTE: near aumentado a 0.1 para evitar clipping (cámara atravesando geometría)
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -39,7 +38,7 @@ function inicializarVisor3D() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-    renderer.toneMappingExposure = 1.15; // Ajustado levemente para balancear el brillo del Bloom
+    renderer.toneMappingExposure = 1.15; 
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     document.body.appendChild(renderer.domElement);
@@ -85,14 +84,14 @@ function inicializarVisor3D() {
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
     
-    // Configuración calibrada (Sutil para evitar el aspecto cuadrado)
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
+    // Filtro Bloom optimizado para los nuevos destellos suaves
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.4, 0.1);
     
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
     composer.addPass(renderScene);
-    composer.addPass(bloomPass); // Inyectamos el filtro de resplandor dorado
+    composer.addPass(bloomPass); 
     composer.addPass(outputPass);
 
     // GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
@@ -126,6 +125,27 @@ function inicializarVisor3D() {
     camera.add(cameraLight);
     scene.add(camera); 
 
+    // TEXTURA DE BRILLO MÁGICO (Generada mediante código de forma dinámica para evitar cargar imágenes externas)
+    function createSparkleTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 64;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+
+        // Gradiente radial para simular una estrella brillante difuminada en los bordes
+        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.15, 'rgba(255, 240, 200, 0.8)');
+        gradient.addColorStop(0.4, 'rgba(223, 168, 55, 0.2)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 64, 64);
+
+        return new THREE.CanvasTexture(canvas);
+    }
+    const sparkleTexture = createSparkleTexture();
+
     // CARGA DEL MODELO 3D
     const loader = new GLTFLoader();
     loader.setCrossOrigin('anonymous');
@@ -134,20 +154,36 @@ function inicializarVisor3D() {
         modelPath, 
         function (gltf) {
             const model = gltf.scene;
+            
+            // Lista para recolectar posiciones reales del marco
+            const validPositions = [];
 
             model.traverse((child) => {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
                     
-                    mat.envMapIntensity = 1.0; // Reducido para mayor sutileza
+                    mat.envMapIntensity = 1.0; 
                     mat.needsUpdate = true;
+
+                    // Estrategia: Tomar puntos geométricos existentes del objeto para adherir los brillos a él
+                    const positionAttribute = child.geometry.attributes.position;
+                    if (positionAttribute) {
+                        const tempV = new THREE.Vector3();
+                        // Tomamos una muestra saltada de vértices para no saturar
+                        for (let i = 0; i < positionAttribute.count; i += 45) {
+                            tempV.fromBufferAttribute(positionAttribute, i);
+                            // Convertimos la posición local del vértice a coordenadas del mundo real
+                            child.localToWorld(tempV);
+                            validPositions.push(tempV.x, tempV.y, tempV.z + 0.01); // Un leve offset en Z hacia el frente
+                        }
+                    }
                 }
             });
 
             scene.add(model);
             
-            // BORRAR EL CONTENEDOR DEL ANILLO DE CARGA DE FORMA SUAVE
+            // BORRAR EL CONTENEDOR DEL ANILLO DE CARGA
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
@@ -161,87 +197,55 @@ function inicializarVisor3D() {
             const center = box.getCenter(new THREE.Vector3());
 
             // ==========================================
-            // NUEVO: CREACIÓN DE PARTÍCULAS (ESTRELLITAS) EN EL MARCO
+            // NUEVO: SISTEMA DE PARTICULAS ADHERIDAS CON TEXTURA ESTRELLA
             // ==========================================
-            const particleCount = 60; // Número de brillos repartidos por el marco
-            sparkleGeometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(particleCount * 3);
-            const colors = new Float32Array(particleCount * 3);
+            if (validPositions.length > 0) {
+                sparkleGeometry = new THREE.BufferGeometry();
+                const positions = new Float32Array(validPositions);
+                const colors = new Float32Array(validPositions.length);
 
-            // Coordenadas calculadas dinámicamente con los límites frontales del cuadro + un leve offset
-            const minX = center.x - size.x / 2 - 0.01;
-            const maxX = center.x + size.x / 2 + 0.01;
-            const minY = center.y - size.y / 2 - 0.01;
-            const maxY = center.y + size.y / 2 + 0.01;
-            const frontZ = center.z + size.z / 2 + 0.02; // Al frente para evitar que se metan en el lienzo
+                for (let i = 0; i < validPositions.length / 3; i++) {
+                    // Tono dorado/blanco cálido base
+                    colors[i * 3] = 1.0;     
+                    colors[i * 3 + 1] = 0.95;  
+                    colors[i * 3 + 2] = 0.80;  
 
-            for (let i = 0; i < particleCount; i++) {
-                const edge = i % 4; // Distribución matemática entre los 4 bordes del marco
-                let x, y;
-                const pct = Math.random();
-
-                if (edge === 0) { // Marco Superior
-                    x = minX + (maxX - minX) * pct;
-                    y = maxY;
-                } else if (edge === 1) { // Marco Inferior
-                    x = minX + (maxX - minX) * pct;
-                    y = minY;
-                } else if (edge === 2) { // Marco Izquierdo
-                    x = minX;
-                    y = minY + (maxY - minY) * pct;
-                } else { // Marco Derecho
-                    x = maxX;
-                    y = minY + (maxY - minY) * pct;
+                    sparkleOpacities.push({
+                        current: Math.random(),
+                        speed: 0.01 + Math.random() * 0.025, // Titileo suave e individual
+                        growing: Math.random() > 0.5
+                    });
                 }
 
-                positions[i * 3] = x;
-                positions[i * 3 + 1] = y;
-                positions[i * 3 + 2] = frontZ;
+                sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+                sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-                // Color base (Blanco cálido/dorado para reaccionar al Bloom)
-                colors[i * 3] = 1.0;     // R
-                colors[i * 3 + 1] = 0.95;  // G
-                colors[i * 3 + 2] = 0.85;  // B
-
-                // Parámetros de animación individuales (Titileo asíncrono)
-                sparkleOpacities.push({
-                    current: Math.random(),
-                    speed: 0.015 + Math.random() * 0.035, // Velocidad asíncrona elegante
-                    growing: Math.random() > 0.5
+                const sparkleMaterial = new THREE.PointsMaterial({
+                    size: 0.25, // Controla el tamaño visual de la estrella (el Bloom lo expandirá de forma bonita)
+                    vertexColors: true,
+                    transparent: true,
+                    map: sparkleTexture, // Aquí inyectamos el círculo/estrella difuminado
+                    blending: THREE.AdditiveBlending, 
+                    depthWrite: false
                 });
+
+                sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
+                scene.add(sparkles);
             }
-
-            sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-
-            const sparkleMaterial = new THREE.PointsMaterial({
-                size: 0.07, // Escala de los brillos. Modificar si se ven muy grandes/chicos
-                vertexColors: true,
-                transparent: true,
-                blending: THREE.AdditiveBlending, // Suma luces ideal para efectos luminiscentes
-                depthWrite: false
-            });
-
-            sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
-            scene.add(sparkles);
             // ==========================================
             
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // MODIFICADO: minDistance intermedio para permitir un zoom más cercano por parte del usuario
             controls.minDistance = maxDim * 0.45; 
             controls.maxDistance = maxDim * 4.0; 
 
-            // MODIFICADO: Ajuste intermedio (0.9). El modelo se verá más grande y cerca al iniciar sin recortarse.
             camera.position.set(center.x, center.y, center.z + (maxDim * 0.9));
             camera.lookAt(center);
             
             controls.update();
         }, 
-        function (xhr) {
-            // Progreso de carga
-        }, 
+        function (xhr) {}, 
         function (error) {
             console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
             const textElement = document.querySelector('.loading-text');
@@ -256,7 +260,7 @@ function inicializarVisor3D() {
         requestAnimationFrame(animate);
         controls.update(); 
         
-        // NUEVO: Lógica de actualización de animación para el titileo (Prender y Apagar)
+        // Animación de desvanecimiento para simular que prenden y apagan
         if (sparkles && sparkleGeometry) {
             const colorAttribute = sparkleGeometry.attributes.color;
             
@@ -268,18 +272,18 @@ function inicializarVisor3D() {
                     if (data.current >= 1.0) data.growing = false;
                 } else {
                     data.current -= data.speed;
-                    if (data.current <= 0.1) data.growing = true;
+                    if (data.current <= 0.0) data.growing = true;
                 }
 
-                // Atenuamos/Multiplicamos los canales de color en base al ciclo actual de opacidad
+                // Modifica el brillo de los colores en base a la animación del fotograma
                 colorAttribute.setXYZ(
                     i, 
                     1.0 * data.current,  
                     0.95 * data.current, 
-                    0.85 * data.current
+                    0.80 * data.current
                 );
             }
-            colorAttribute.needsUpdate = true; // Forzar renderizado de nuevos colores en la GPU
+            colorAttribute.needsUpdate = true; 
         }
 
         if (composer) {
