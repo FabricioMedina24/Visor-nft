@@ -80,16 +80,16 @@ function inicializarVisor3D() {
     startAutoRotation();
 
     // ==========================================
-    // CONFIGURACIÓN DEL CANAL DE BLOOM DETALLADO Y SUTIL
+    // CONFIGURACIÓN DEL CANAL DE BLOOM ULTRA-SUTIL Y FINO
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
     
-    // Configuración balanceada para el destello estelar
+    // CALIBRACIÓN CRÍTICA: Se redujo el radio a 0.08 y la intensidad a 0.12 para evitar destellos gigantes
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight), 
-        0.2,  // Fuerza (strength)
-        0.15, // Radio (radius)
-        0.55  // Umbral (threshold)
+        0.12,  // Fuerza (strength) - Resplandor sutil
+        0.08,  // Radio (radius) - Ultra concentrado en la punta de la estrella
+        0.75   // Umbral (threshold) - Solo brillan los pixeles más puros
     );
     
     const outputPass = new OutputPass();
@@ -130,9 +130,7 @@ function inicializarVisor3D() {
     camera.add(cameraLight);
     scene.add(camera); 
 
-    // ===================================================
-    // NUEVA TEXTURA DE ESTRELLA DESTALLANTE CON PUNTAS FINAS
-    // ===================================================
+    // TEXTURA DE ESTRELLA ESTILO DESTELLO MICRO-FINO
     function createTrueSparkleTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 64;
@@ -144,37 +142,32 @@ function inicializarVisor3D() {
         const cx = 32;
         const cy = 32;
 
-        // Dibujamos la silueta de una estrella de destello de 4 puntas cóncavas
+        // Geometría cóncava más pronunciada para que las puntas de las estrellas sean delgadísimas
         ctx.beginPath();
-        // Punta Superior
-        ctx.moveTo(cx, cy - 30);
-        // Curva hacia la cintura derecha
-        ctx.quadraticCurveTo(cx, cy, cx + 30, cy);
-        // Curva hacia la punta inferior
-        ctx.quadraticCurveTo(cx, cy, cx, cy + 30);
-        // Curva hacia la cintura izquierda
-        ctx.quadraticCurveTo(cx, cy, cx - 30, cy);
-        // Curva de regreso a la punta superior
-        ctx.quadraticCurveTo(cx, cy, cx, cy - 30);
+        ctx.moveTo(cx, cy - 28);
+        ctx.quadraticCurveTo(cx, cy, cx + 28, cy);
+        ctx.quadraticCurveTo(cx, cy, cx, cy + 28);
+        ctx.quadraticCurveTo(cx, cy, cx - 28, cy);
+        ctx.quadraticCurveTo(cx, cy, cx, cy - 28);
         ctx.closePath();
 
-        // Rellenamos la estrella con un degradado radial cristalino para que las puntas se desvanezcan de forma sutil
-        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 28);
+        // Degradado de luz concentrado en el puro centro
+        const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 26);
         gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
-        gradient.addColorStop(0.15, 'rgba(255, 250, 230, 0.9)');
-        gradient.addColorStop(0.5, 'rgba(245, 215, 140, 0.25)');
+        gradient.addColorStop(0.12, 'rgba(255, 252, 240, 0.85)');
+        gradient.addColorStop(0.35, 'rgba(245, 220, 150, 0.15)');
         gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
         ctx.fillStyle = gradient;
         ctx.fill();
 
-        // Destello de núcleo central ultra nítido e intenso
-        const coreGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 4);
+        // Núcleo brillante micro central
+        const coreGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 3);
         coreGradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
         coreGradient.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
         ctx.fillStyle = coreGradient;
         ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 3, 0, Math.PI * 2);
         ctx.fill();
 
         return new THREE.CanvasTexture(canvas);
@@ -202,13 +195,13 @@ function inicializarVisor3D() {
                     const positionAttribute = child.geometry.attributes.position;
                     if (positionAttribute) {
                         const tempV = new THREE.Vector3();
-                        // Muestreo saltado (i += 65) para mantener la elegancia y que no esté saturado
-                        for (let i = 0; i < positionAttribute.count; i += 65) {
+                        // i += 85: Aumentamos el salto para tener menos cantidad de destellos dispersos, haciéndolo más exclusivo
+                        for (let i = 0; i < positionAttribute.count; i += 85) {
                             tempV.fromBufferAttribute(positionAttribute, i);
                             child.localToWorld(tempV);
                             
-                            // Ajustado levemente al frente para evitar clipping
-                            validPositions.push(tempV.x, tempV.y, tempV.z + 0.006); 
+                            // Ajuste milimétrico sobre el plano del oro (+ 0.003)
+                            validPositions.push(tempV.x, tempV.y, tempV.z + 0.003); 
                         }
                     }
                 }
@@ -229,7 +222,7 @@ function inicializarVisor3D() {
             const center = box.getCenter(new THREE.Vector3());
 
             // ==========================================
-            // INYECCIÓN DE SISTEMA DE ESTRELLITAS FINAS
+            // INYECCIÓN DE SISTEMA DE ESTRELLITAS DE LUJO
             // ==========================================
             if (validPositions.length > 0) {
                 sparkleGeometry = new THREE.BufferGeometry();
@@ -239,11 +232,11 @@ function inicializarVisor3D() {
                 for (let i = 0; i < validPositions.length / 3; i++) {
                     colors[i * 3] = 1.0;     
                     colors[i * 3 + 1] = 0.98;  
-                    colors[i * 3 + 2] = 0.90;  
+                    colors[i * 3 + 2] = 0.92;  
 
                     sparkleOpacities.push({
-                        current: Math.random(),
-                        speed: 0.009 + Math.random() * 0.016, // Parpadeo pausado, asíncrono y orgánico
+                        current: Math.random() * 0.5, // Empiezan con brillos iniciales más atenuados
+                        speed: 0.006 + Math.random() * 0.012, // Parpadeo lento y lujoso
                         growing: Math.random() > 0.5
                     });
                 }
@@ -252,10 +245,10 @@ function inicializarVisor3D() {
                 sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
                 const sparkleMaterial = new THREE.PointsMaterial({
-                    size: 0.06, // Tamaño óptimo para apreciar las 4 puntas de la estrella sin que se rompa la escala
+                    size: 0.018, // MODIFICADO: Tamaño reducido drásticamente (de 0.06 a 0.018) para verse como finos cristales
                     vertexColors: true,
                     transparent: true,
-                    map: sparkleTexture, // Uso de la textura matemática con puntas cóncavas
+                    map: sparkleTexture, 
                     blending: THREE.AdditiveBlending, 
                     depthWrite: false
                 });
@@ -291,7 +284,6 @@ function inicializarVisor3D() {
         requestAnimationFrame(animate);
         controls.update(); 
         
-        // Ciclo de atenuación progresiva de las estrellitas
         if (sparkles && sparkleGeometry) {
             const colorAttribute = sparkleGeometry.attributes.color;
             
@@ -300,17 +292,17 @@ function inicializarVisor3D() {
                 
                 if (data.growing) {
                     data.current += data.speed;
-                    if (data.current >= 0.9) data.growing = false; 
+                    if (data.current >= 0.75) data.growing = false; // Techo de brillo limitado para máxima discreción
                 } else {
                     data.current -= data.speed;
-                    if (data.current <= 0.02) data.growing = true;
+                    if (data.current <= 0.01) data.growing = true;
                 }
 
                 colorAttribute.setXYZ(
                     i, 
                     1.0 * data.current,  
                     0.98 * data.current, 
-                    0.90 * data.current
+                    0.92 * data.current
                 );
             }
             colorAttribute.needsUpdate = true; 
