@@ -80,12 +80,18 @@ function inicializarVisor3D() {
     startAutoRotation();
 
     // ==========================================
-    // CONFIGURACIÓN DEL CANAL DE POST-PROCESAMIENTO (BLOOM)
+    // CONFIGURACIÓN DEL CANAL DE BLOOM DETALLADO Y SUTIL
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
     
-    // Filtro Bloom optimizado para los nuevos destellos suaves
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.3, 0.4, 0.1);
+    // REDUCIDO: Fuerza del bloom rebajada (0.15) y radio ultra ajustado (0.1) 
+    // Esto genera un resplandor micro-fino y elegante que no invade la escena.
+    const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight), 
+        0.15, // Fuerza (strength)
+        0.10, // Radio del brillo (radius)
+        0.65  // Umbral de activación (threshold)
+    );
     
     const outputPass = new OutputPass();
 
@@ -125,26 +131,46 @@ function inicializarVisor3D() {
     camera.add(cameraLight);
     scene.add(camera); 
 
-    // TEXTURA DE BRILLO MÁGICO (Generada mediante código de forma dinámica para evitar cargar imágenes externas)
-    function createSparkleTexture() {
+    // TEXTURA DE ESTRELLA ESTILO DESTELLO FINO (Con centro nítido y cruz suave)
+    function createElegantSparkleTexture() {
         const canvas = document.createElement('canvas');
         canvas.width = 64;
         canvas.height = 64;
         const ctx = canvas.getContext('2d');
 
-        // Gradiente radial para simular una estrella brillante difuminada en los bordes
-        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        gradient.addColorStop(0.15, 'rgba(255, 240, 200, 0.8)');
-        gradient.addColorStop(0.4, 'rgba(223, 168, 55, 0.2)');
-        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        // Fondo transparente
+        ctx.clearRect(0, 0, 64, 64);
 
+        // Destello central suave
+        const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 16);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+        gradient.addColorStop(0.2, 'rgba(255, 245, 220, 0.8)');
+        gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 64, 64);
+        ctx.beginPath();
+        ctx.arc(32, 32, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Finas líneas en cruz para simular un destello de joya/diamante aristocrático
+        const glowGradientH = ctx.createLinearGradient(16, 32, 48, 32);
+        glowGradientH.addColorStop(0, 'rgba(0,0,0,0)');
+        glowGradientH.addColorStop(0.5, 'rgba(255,250,230,0.6)');
+        glowGradientH.addColorStop(1, 'rgba(0,0,0,0)');
+        
+        ctx.fillStyle = glowGradientH;
+        ctx.fillRect(16, 31.5, 32, 1); // Línea horizontal ultra fina
+
+        const glowGradientV = ctx.createLinearGradient(32, 16, 32, 48);
+        glowGradientV.addColorStop(0, 'rgba(0,0,0,0)');
+        glowGradientV.addColorStop(0.5, 'rgba(255,250,230,0.6)');
+        glowGradientV.addColorStop(1, 'rgba(0,0,0,0)');
+        
+        ctx.fillStyle = glowGradientV;
+        ctx.fillRect(31.5, 16, 1, 32); // Línea vertical ultra fina
 
         return new THREE.CanvasTexture(canvas);
     }
-    const sparkleTexture = createSparkleTexture();
+    const sparkleTexture = createElegantSparkleTexture();
 
     // CARGA DEL MODELO 3D
     const loader = new GLTFLoader();
@@ -154,8 +180,6 @@ function inicializarVisor3D() {
         modelPath, 
         function (gltf) {
             const model = gltf.scene;
-            
-            // Lista para recolectar posiciones reales del marco
             const validPositions = [];
 
             model.traverse((child) => {
@@ -166,16 +190,16 @@ function inicializarVisor3D() {
                     mat.envMapIntensity = 1.0; 
                     mat.needsUpdate = true;
 
-                    // Estrategia: Tomar puntos geométricos existentes del objeto para adherir los brillos a él
                     const positionAttribute = child.geometry.attributes.position;
                     if (positionAttribute) {
                         const tempV = new THREE.Vector3();
-                        // Tomamos una muestra saltada de vértices para no saturar
-                        for (let i = 0; i < positionAttribute.count; i += 45) {
+                        // Ajuste del paso (i += 60): reduce la cantidad de puntos flotantes simultáneos
+                        for (let i = 0; i < positionAttribute.count; i += 60) {
                             tempV.fromBufferAttribute(positionAttribute, i);
-                            // Convertimos la posición local del vértice a coordenadas del mundo real
                             child.localToWorld(tempV);
-                            validPositions.push(tempV.x, tempV.y, tempV.z + 0.01); // Un leve offset en Z hacia el frente
+                            
+                            // Ajustado a +0.005 para que repose de forma perfecta y elegante sobre la superficie del oro
+                            validPositions.push(tempV.x, tempV.y, tempV.z + 0.005); 
                         }
                     }
                 }
@@ -183,7 +207,6 @@ function inicializarVisor3D() {
 
             scene.add(model);
             
-            // BORRAR EL CONTENEDOR DEL ANILLO DE CARGA
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
@@ -197,7 +220,7 @@ function inicializarVisor3D() {
             const center = box.getCenter(new THREE.Vector3());
 
             // ==========================================
-            // NUEVO: SISTEMA DE PARTICULAS ADHERIDAS CON TEXTURA ESTRELLA
+            // CONFIGURACIÓN DE PUNTOS MICRO-DESTELLANTES
             // ==========================================
             if (validPositions.length > 0) {
                 sparkleGeometry = new THREE.BufferGeometry();
@@ -205,14 +228,13 @@ function inicializarVisor3D() {
                 const colors = new Float32Array(validPositions.length);
 
                 for (let i = 0; i < validPositions.length / 3; i++) {
-                    // Tono dorado/blanco cálido base
                     colors[i * 3] = 1.0;     
-                    colors[i * 3 + 1] = 0.95;  
-                    colors[i * 3 + 2] = 0.80;  
+                    colors[i * 3 + 1] = 0.98;  
+                    colors[i * 3 + 2] = 0.90;  
 
                     sparkleOpacities.push({
                         current: Math.random(),
-                        speed: 0.01 + Math.random() * 0.025, // Titileo suave e individual
+                        speed: 0.008 + Math.random() * 0.015, // Titileo pausado, lento y sofisticado
                         growing: Math.random() > 0.5
                     });
                 }
@@ -221,10 +243,10 @@ function inicializarVisor3D() {
                 sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
                 const sparkleMaterial = new THREE.PointsMaterial({
-                    size: 0.25, // Controla el tamaño visual de la estrella (el Bloom lo expandirá de forma bonita)
+                    size: 0.035, // REDUCIDO ADREDE: Tamaño minúsculo para que luzcan como sutiles diamantes refractando luz
                     vertexColors: true,
                     transparent: true,
-                    map: sparkleTexture, // Aquí inyectamos el círculo/estrella difuminado
+                    map: sparkleTexture, 
                     blending: THREE.AdditiveBlending, 
                     depthWrite: false
                 });
@@ -260,7 +282,7 @@ function inicializarVisor3D() {
         requestAnimationFrame(animate);
         controls.update(); 
         
-        // Animación de desvanecimiento para simular que prenden y apagan
+        // Transición de opacidad balanceada
         if (sparkles && sparkleGeometry) {
             const colorAttribute = sparkleGeometry.attributes.color;
             
@@ -269,18 +291,17 @@ function inicializarVisor3D() {
                 
                 if (data.growing) {
                     data.current += data.speed;
-                    if (data.current >= 1.0) data.growing = false;
+                    if (data.current >= 0.85) data.growing = false; // Tope máximo de brillo reducido para control
                 } else {
                     data.current -= data.speed;
-                    if (data.current <= 0.0) data.growing = true;
+                    if (data.current <= 0.05) data.growing = true;
                 }
 
-                // Modifica el brillo de los colores en base a la animación del fotograma
                 colorAttribute.setXYZ(
                     i, 
                     1.0 * data.current,  
-                    0.95 * data.current, 
-                    0.80 * data.current
+                    0.98 * data.current, 
+                    0.90 * data.current
                 );
             }
             colorAttribute.needsUpdate = true; 
