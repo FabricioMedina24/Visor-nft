@@ -9,6 +9,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 let composer; // Variable global para el motor de efectos
+let sparkles, sparkleGeometry; // NUEVO: Variables para el sistema de partículas
+let sparkleOpacities = [];    // NUEVO: Almacenará el estado de titileo (opacidad individual) de cada estrella
 
 requestAnimationFrame(() => {
     setTimeout(inicializarVisor3D, 50);
@@ -157,6 +159,72 @@ function inicializarVisor3D() {
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
+
+            // ==========================================
+            // NUEVO: CREACIÓN DE PARTÍCULAS (ESTRELLITAS) EN EL MARCO
+            // ==========================================
+            const particleCount = 60; // Número de brillos repartidos por el marco
+            sparkleGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const colors = new Float32Array(particleCount * 3);
+
+            // Coordenadas calculadas dinámicamente con los límites frontales del cuadro + un leve offset
+            const minX = center.x - size.x / 2 - 0.01;
+            const maxX = center.x + size.x / 2 + 0.01;
+            const minY = center.y - size.y / 2 - 0.01;
+            const maxY = center.y + size.y / 2 + 0.01;
+            const frontZ = center.z + size.z / 2 + 0.02; // Al frente para evitar que se metan en el lienzo
+
+            for (let i = 0; i < particleCount; i++) {
+                const edge = i % 4; // Distribución matemática entre los 4 bordes del marco
+                let x, y;
+                const pct = Math.random();
+
+                if (edge === 0) { // Marco Superior
+                    x = minX + (maxX - minX) * pct;
+                    y = maxY;
+                } else if (edge === 1) { // Marco Inferior
+                    x = minX + (maxX - minX) * pct;
+                    y = minY;
+                } else if (edge === 2) { // Marco Izquierdo
+                    x = minX;
+                    y = minY + (maxY - minY) * pct;
+                } else { // Marco Derecho
+                    x = maxX;
+                    y = minY + (maxY - minY) * pct;
+                }
+
+                positions[i * 3] = x;
+                positions[i * 3 + 1] = y;
+                positions[i * 3 + 2] = frontZ;
+
+                // Color base (Blanco cálido/dorado para reaccionar al Bloom)
+                colors[i * 3] = 1.0;     // R
+                colors[i * 3 + 1] = 0.95;  // G
+                colors[i * 3 + 2] = 0.85;  // B
+
+                // Parámetros de animación individuales (Titileo asíncrono)
+                sparkleOpacities.push({
+                    current: Math.random(),
+                    speed: 0.015 + Math.random() * 0.035, // Velocidad asíncrona elegante
+                    growing: Math.random() > 0.5
+                });
+            }
+
+            sparkleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            sparkleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const sparkleMaterial = new THREE.PointsMaterial({
+                size: 0.07, // Escala de los brillos. Modificar si se ven muy grandes/chicos
+                vertexColors: true,
+                transparent: true,
+                blending: THREE.AdditiveBlending, // Suma luces ideal para efectos luminiscentes
+                depthWrite: false
+            });
+
+            sparkles = new THREE.Points(sparkleGeometry, sparkleMaterial);
+            scene.add(sparkles);
+            // ==========================================
             
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
@@ -188,6 +256,32 @@ function inicializarVisor3D() {
         requestAnimationFrame(animate);
         controls.update(); 
         
+        // NUEVO: Lógica de actualización de animación para el titileo (Prender y Apagar)
+        if (sparkles && sparkleGeometry) {
+            const colorAttribute = sparkleGeometry.attributes.color;
+            
+            for (let i = 0; i < sparkleOpacities.length; i++) {
+                const data = sparkleOpacities[i];
+                
+                if (data.growing) {
+                    data.current += data.speed;
+                    if (data.current >= 1.0) data.growing = false;
+                } else {
+                    data.current -= data.speed;
+                    if (data.current <= 0.1) data.growing = true;
+                }
+
+                // Atenuamos/Multiplicamos los canales de color en base al ciclo actual de opacidad
+                colorAttribute.setXYZ(
+                    i, 
+                    1.0 * data.current,  
+                    0.95 * data.current, 
+                    0.85 * data.current
+                );
+            }
+            colorAttribute.needsUpdate = true; // Forzar renderizado de nuevos colores en la GPU
+        }
+
         if (composer) {
             composer.render();
         } else {
