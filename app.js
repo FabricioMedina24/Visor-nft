@@ -130,7 +130,7 @@ function inicializarVisor3D() {
             const model = gltf.scene;
 
             // ==========================================
-            // SISTEMA DE CAMBIO DE PINTURAS (LIENZO ALEATORIO SIN REPETIR)
+            // SISTEMA DE CAMBIO DE PINTURAS (ANIMACIÓN MÁGICA)
             // ==========================================
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
@@ -146,13 +146,10 @@ function inicializarVisor3D() {
             if (lienzo && lienzo.material) {
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
-                
-                // Mantiene el límite estricto en 10 imágenes
                 const totalImagenes = 10; 
-                
-                let indiceActual = -1; // Evita repeticiones consecutivas
+                let indiceActual = -1; 
 
-                // Precarga las 10 imágenes
+                // Precarga de imágenes
                 for (let i = 1; i <= totalImagenes; i++) {
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
@@ -164,12 +161,58 @@ function inicializarVisor3D() {
                     texturas.push(texturaCarga);
                 }
 
-                // Inicia con el material de Substance Painter. Luego cambia cada 1 minuto (60000ms).
+                // --- FUNCIÓN DE ANIMACIÓN DE RESPLANDOR ---
+                function hacerTransicionMagica(nuevaTextura) {
+                    const duracion = 1500; // 1.5 segundos de efecto mágico
+                    const inicio = performance.now();
+                    const material = lienzo.material;
+
+                    // Respaldar las propiedades emisivas que traía de Substance Painter
+                    const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
+                    const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 0;
+
+                    // Color de la magia (Un tono blanco/dorado)
+                    const colorMagia = new THREE.Color(0xffeaba);
+
+                    function animarResplandor() {
+                        const ahora = performance.now();
+                        let t = (ahora - inicio) / duracion;
+
+                        if (t >= 1) {
+                            // Fin de la animación: restaurar el estado original del material
+                            if (material.emissive) material.emissive.copy(emisionOriginal);
+                            material.emissiveIntensity = intensidadOriginal;
+                            return;
+                        }
+
+                        // Curva en forma de campana: 0 -> 1 -> 0
+                        const curvaLuz = Math.sin(t * Math.PI);
+
+                        // Aplicar el brillo progresivamente para activar el Bloom
+                        if (!material.emissive) material.emissive = new THREE.Color(0x000000);
+                        material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
+                        material.emissiveIntensity = curvaLuz * 3.5; // El 3.5 fuerza un brillo cinematográfico
+
+                        // Exactamente en el punto máximo de luz (mitad de la animación), cambiamos la foto
+                        if (t >= 0.5 && material.map !== nuevaTextura) {
+                            material.color.setHex(0xffffff); // Forzar blanco en el Base Color
+                            material.map = nuevaTextura;
+                            material.needsUpdate = true;
+                        }
+
+                        requestAnimationFrame(animarResplandor);
+                    }
+
+                    animarResplandor();
+                }
+                // ------------------------------------------
+
+                // Cambio automático aleatorio usando la transición mágica cada 1 minuto
                 setInterval(() => {
                     if (texturas.length > 0) {
                         let nuevoIndice;
                         
-                        // Sistema matemático que obliga a elegir una imagen distinta a la actual
+                        // Elegir aleatoriamente evitando repetición
                         do {
                             nuevoIndice = Math.floor(Math.random() * texturas.length);
                         } while (nuevoIndice === indiceActual && texturas.length > 1);
@@ -177,13 +220,13 @@ function inicializarVisor3D() {
                         indiceActual = nuevoIndice;
 
                         if (texturas[indiceActual]) {
-                            lienzo.material.color.setHex(0xffffff);
-                            lienzo.material.map = texturas[indiceActual];
-                            lienzo.material.needsUpdate = true;
-                            console.log(`Cambiando a imagen aleatoria: ${indiceActual + 1}.png`);
+                            // Ejecutamos el destello en lugar de cambiar la textura de golpe
+                            hacerTransicionMagica(texturas[indiceActual]);
+                            console.log(`Transición mágica iniciada hacia: ${indiceActual + 1}.png`);
                         }
                     }
                 }, 60000); 
+
             } else {
                 console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
             }
