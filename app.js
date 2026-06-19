@@ -130,7 +130,7 @@ function inicializarVisor3D() {
             const model = gltf.scene;
 
             // ==========================================
-            // SISTEMA DE CAMBIO DE PINTURAS (LIENZO)
+            // SISTEMA DE CAMBIO DE PINTURAS (LIENZO ALEATORIO SIN REPETIR)
             // ==========================================
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
@@ -146,10 +146,13 @@ function inicializarVisor3D() {
             if (lienzo && lienzo.material) {
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
-                const totalImagenes = 10;
-                let indice = 0;
+                
+                // Mantiene el límite estricto en 10 imágenes
+                const totalImagenes = 10; 
+                
+                let indiceActual = -1; // Evita repeticiones consecutivas
 
-                // Precargar las 10 imágenes en formato .png silenciosamente
+                // Precarga las 10 imágenes
                 for (let i = 1; i <= totalImagenes; i++) {
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
@@ -161,22 +164,26 @@ function inicializarVisor3D() {
                     texturas.push(texturaCarga);
                 }
 
-                // Cambio automático: Espera 1 minuto para poner la foto 1.png, luego 2.png...
+                // Inicia con el material de Substance Painter. Luego cambia cada 1 minuto (60000ms).
                 setInterval(() => {
-                    if (texturas[indice]) {
-                        // Forzamos el color a blanco justo al momento de inyectar la foto
-                        // para evitar que el Base Color original modifique los tonos de tu PNG
-                        lienzo.material.color.setHex(0xffffff);
+                    if (texturas.length > 0) {
+                        let nuevoIndice;
                         
-                        lienzo.material.map = texturas[indice];
-                        lienzo.material.needsUpdate = true;
-                        console.log(`Cambiando a imagen: ${indice + 1}.png`);
+                        // Sistema matemático que obliga a elegir una imagen distinta a la actual
+                        do {
+                            nuevoIndice = Math.floor(Math.random() * texturas.length);
+                        } while (nuevoIndice === indiceActual && texturas.length > 1);
+                        
+                        indiceActual = nuevoIndice;
+
+                        if (texturas[indiceActual]) {
+                            lienzo.material.color.setHex(0xffffff);
+                            lienzo.material.map = texturas[indiceActual];
+                            lienzo.material.needsUpdate = true;
+                            console.log(`Cambiando a imagen aleatoria: ${indiceActual + 1}.png`);
+                        }
                     }
-                    
-                    // Avanzamos al siguiente índice para el próximo minuto
-                    indice = (indice + 1) % texturas.length;
-                    
-                }, 60000); // 60000 milisegundos = 1 minuto
+                }, 60000); 
             } else {
                 console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
             }
