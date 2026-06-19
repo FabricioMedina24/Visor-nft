@@ -135,7 +135,6 @@ function inicializarVisor3D() {
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
 
-            // Buscar el Mesh real dentro del nodo (Solución para Substance Painter)
             if (nodoLienzo) {
                 nodoLienzo.traverse((child) => {
                     if (child.isMesh && child.material) {
@@ -145,15 +144,12 @@ function inicializarVisor3D() {
             }
             
             if (lienzo && lienzo.material) {
-                // Forzar el color base a blanco para que no interfiera con las texturas
-                lienzo.material.color.setHex(0xffffff);
-                
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
                 const totalImagenes = 10;
                 let indice = 0;
 
-                // Precargar las 10 imágenes en formato .png
+                // Precargar las 10 imágenes en formato .png silenciosamente
                 for (let i = 1; i <= totalImagenes; i++) {
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
@@ -165,22 +161,22 @@ function inicializarVisor3D() {
                     texturas.push(texturaCarga);
                 }
 
-                // Aplicar la primera textura
-                if (texturas[0]) {
-                    lienzo.material.map = texturas[0];
-                    lienzo.material.needsUpdate = true;
-                }
-
-                // Cambio automático cada 1 MINUTO (60000 ms)
+                // Cambio automático: Espera 1 minuto para poner la foto 1.png, luego 2.png...
                 setInterval(() => {
-                    indice = (indice + 1) % texturas.length;
-                    
                     if (texturas[indice]) {
+                        // Forzamos el color a blanco justo al momento de inyectar la foto
+                        // para evitar que el Base Color original modifique los tonos de tu PNG
+                        lienzo.material.color.setHex(0xffffff);
+                        
                         lienzo.material.map = texturas[indice];
                         lienzo.material.needsUpdate = true;
                         console.log(`Cambiando a imagen: ${indice + 1}.png`);
                     }
-                }, 60000);
+                    
+                    // Avanzamos al siguiente índice para el próximo minuto
+                    indice = (indice + 1) % texturas.length;
+                    
+                }, 60000); // 60000 milisegundos = 1 minuto
             } else {
                 console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
             }
