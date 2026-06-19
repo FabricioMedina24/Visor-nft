@@ -135,7 +135,7 @@ function inicializarVisor3D() {
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
 
-            // Buscar el Mesh real dentro del nodo
+            // Buscar el Mesh real dentro del nodo (Solución para Substance Painter)
             if (nodoLienzo) {
                 nodoLienzo.traverse((child) => {
                     if (child.isMesh && child.material) {
@@ -153,9 +153,9 @@ function inicializarVisor3D() {
                 const totalImagenes = 10;
                 let indice = 0;
 
-                // Precargar las 10 imágenes
+                // Precargar las 10 imágenes en formato .png
                 for (let i = 1; i <= totalImagenes; i++) {
-                    const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.jpg`;
+                    const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
                     const texturaCarga = textureLoader.load(url, (txt) => {
                         txt.colorSpace = THREE.SRGBColorSpace;
@@ -178,7 +178,7 @@ function inicializarVisor3D() {
                     if (texturas[indice]) {
                         lienzo.material.map = texturas[indice];
                         lienzo.material.needsUpdate = true;
-                        console.log(`Cambiando a imagen: ${indice + 1}.jpg`);
+                        console.log(`Cambiando a imagen: ${indice + 1}.png`);
                     }
                 }, 60000);
             } else {
