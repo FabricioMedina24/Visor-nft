@@ -8,7 +8,7 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-let composer; // Variable global para el motor de efectos
+let composer; 
 
 requestAnimationFrame(() => {
     setTimeout(inicializarVisor3D, 50);
@@ -24,9 +24,8 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0b0b); // Un negro un poco más profundo para resaltar el Bloom
+    scene.background = new THREE.Color(0x0b0b0b); 
 
-    // AJUSTE: near aumentado a 0.1 para evitar clipping (cámara atravesando geometría)
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -37,7 +36,7 @@ function inicializarVisor3D() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     renderer.toneMapping = THREE.ACESFilmicToneMapping; 
-    renderer.toneMappingExposure = 1.15; // Ajustado levemente para balancear el brillo del Bloom
+    renderer.toneMappingExposure = 1.15; 
     renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     document.body.appendChild(renderer.domElement);
@@ -82,15 +81,12 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL CANAL DE POST-PROCESAMIENTO (BLOOM)
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
-    
-    // Configuración calibrada (Sutil para evitar el aspecto cuadrado)
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
-    
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
     composer.addPass(renderScene);
-    composer.addPass(bloomPass); // Inyectamos el filtro de resplandor dorado
+    composer.addPass(bloomPass); 
     composer.addPass(outputPass);
 
     // GENERACIÓN DE ENTORNO HDRI DE ESTUDIO NEUTRO
@@ -134,19 +130,30 @@ function inicializarVisor3D() {
             const model = gltf.scene;
 
             // ==========================================
-            // SISTEMA AVANZADO DE CAMBIO DE PINTURAS (LIENZO)
+            // SISTEMA DE CAMBIO DE PINTURAS (LIENZO)
             // ==========================================
-            const lienzo = model.getObjectByName('LIENZO');
-            
-            console.log('LIENZO encontrado:', lienzo);
+            const nodoLienzo = model.getObjectByName('LIENZO');
+            let lienzo = null;
 
+            // Buscar el Mesh real dentro del nodo
+            if (nodoLienzo) {
+                nodoLienzo.traverse((child) => {
+                    if (child.isMesh && child.material) {
+                        lienzo = child;
+                    }
+                });
+            }
+            
             if (lienzo && lienzo.material) {
+                // Forzar el color base a blanco para que no interfiera con las texturas
+                lienzo.material.color.setHex(0xffffff);
+                
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
                 const totalImagenes = 10;
                 let indice = 0;
 
-                // 1. Precargar las 10 imágenes
+                // Precargar las 10 imágenes
                 for (let i = 1; i <= totalImagenes; i++) {
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.jpg`;
                     
@@ -158,26 +165,24 @@ function inicializarVisor3D() {
                     texturas.push(texturaCarga);
                 }
 
-                // 2. Aplicar la primera textura (SOLO Base Color)
+                // Aplicar la primera textura
                 if (texturas[0]) {
                     lienzo.material.map = texturas[0];
                     lienzo.material.needsUpdate = true;
                 }
 
-                // 3. Cambio automático cada 1 MINUTO (60000 milisegundos)
+                // Cambio automático cada 1 MINUTO (60000 ms)
                 setInterval(() => {
                     indice = (indice + 1) % texturas.length;
                     
                     if (texturas[indice]) {
-                        // Modificar '.map' garantiza que SOLO se reemplace el Base Color.
-                        // Los mapas de relieve (Normal) y brillo (Roughness) no se tocan.
                         lienzo.material.map = texturas[indice];
                         lienzo.material.needsUpdate = true;
-                        console.log(`Pintura cambiada a la imagen: ${indice + 1}.jpg`);
+                        console.log(`Cambiando a imagen: ${indice + 1}.jpg`);
                     }
                 }, 60000);
             } else {
-                console.warn('Alerta: No se encontró el objeto "LIENZO" o no contiene un material válido.');
+                console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
             }
             // ==========================================
 
@@ -186,14 +191,14 @@ function inicializarVisor3D() {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
                     
-                    mat.envMapIntensity = 1.0; // Reducido para mayor sutileza
+                    mat.envMapIntensity = 1.0; 
                     mat.needsUpdate = true;
                 }
             });
 
             scene.add(model);
             
-            // BORRAR EL CONTENEDOR DEL ANILLO DE CARGA DE FORMA SUAVE
+            // BORRAR EL CONTENEDOR DE CARGA
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
@@ -209,11 +214,9 @@ function inicializarVisor3D() {
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // MODIFICADO: minDistance intermedio para permitir un zoom más cercano por parte del usuario
             controls.minDistance = maxDim * 0.45; 
             controls.maxDistance = maxDim * 4.0; 
 
-            // MODIFICADO: Ajuste intermedio (0.9). El modelo se verá más grande y cerca al iniciar sin recortarse.
             camera.position.set(center.x, center.y, center.z + (maxDim * 0.9));
             camera.lookAt(center);
             
@@ -230,7 +233,7 @@ function inicializarVisor3D() {
     );
 
     // ==========================================
-    // BUCLE DE ANIMACIÓN UTILIZANDO COMPOSER
+    // BUCLE DE ANIMACIÓN
     // ==========================================
     function animate() {
         requestAnimationFrame(animate);
