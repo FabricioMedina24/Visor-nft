@@ -133,6 +133,54 @@ function inicializarVisor3D() {
         function (gltf) {
             const model = gltf.scene;
 
+            // ==========================================
+            // SISTEMA AVANZADO DE CAMBIO DE PINTURAS (LIENZO)
+            // ==========================================
+            const lienzo = model.getObjectByName('LIENZO');
+            
+            console.log('LIENZO encontrado:', lienzo);
+
+            if (lienzo && lienzo.material) {
+                const textureLoader = new THREE.TextureLoader();
+                const texturas = [];
+                const totalImagenes = 10;
+                let indice = 0;
+
+                // 1. Precargar las 10 imágenes
+                for (let i = 1; i <= totalImagenes; i++) {
+                    const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.jpg`;
+                    
+                    const texturaCarga = textureLoader.load(url, (txt) => {
+                        txt.colorSpace = THREE.SRGBColorSpace;
+                        txt.flipY = false; 
+                    });
+
+                    texturas.push(texturaCarga);
+                }
+
+                // 2. Aplicar la primera textura (SOLO Base Color)
+                if (texturas[0]) {
+                    lienzo.material.map = texturas[0];
+                    lienzo.material.needsUpdate = true;
+                }
+
+                // 3. Cambio automático cada 1 MINUTO (60000 milisegundos)
+                setInterval(() => {
+                    indice = (indice + 1) % texturas.length;
+                    
+                    if (texturas[indice]) {
+                        // Modificar '.map' garantiza que SOLO se reemplace el Base Color.
+                        // Los mapas de relieve (Normal) y brillo (Roughness) no se tocan.
+                        lienzo.material.map = texturas[indice];
+                        lienzo.material.needsUpdate = true;
+                        console.log(`Pintura cambiada a la imagen: ${indice + 1}.jpg`);
+                    }
+                }, 60000);
+            } else {
+                console.warn('Alerta: No se encontró el objeto "LIENZO" o no contiene un material válido.');
+            }
+            // ==========================================
+
             model.traverse((child) => {
                 if (child.isMesh) {
                     const mat = child.material;
