@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+// Importaciones requeridas para el canal de Bloom cinematográfico
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -14,37 +15,42 @@ requestAnimationFrame(() => {
 });
 
 // =========================================================================
-// CONFIGURACIÓN POR DEFECTO Y MAPEADO DE RAREZAS
+// CONFIGURACIÓN POR DEFECTO Y VALORES POR RAREZA
 // =========================================================================
+// Si un JSON no existe o le faltan campos, se usarán estos valores (Modo Común):
 const CONFIG_POR_DEFECTO = {
     rarity: 'common',
     framesCount: 1,         // Una sola imagen fija por defecto
-    cycleInterval: 0,       // Sin intervalo de ciclo por defecto
-    colorMagia: 0x000000,   // Sin color (apagado)
-    fuerzaBloom: 0.0,       // FUERZA 0: Sin destello para común
+    cycleInterval: 0,       // Sin temporizador de cambio
+    colorMagia: 0x000000,   // Sin color de transición
+    fuerzaBloom: 0.0,       // Fuerza 0: Desactiva el destello
     colorFondo: 0x0b0b0b    // Fondo oscuro nativo
 };
 
+// Comportamiento visual exclusivo de cada rareza
 const CONFIGURACION_RAREZAS = {
     divine:    { colorMagia: 0xff00ff, fuerzaBloom: 6.0,  colorFondo: 0x05000a }, 
     legendary: { colorMagia: 0xffeaba, fuerzaBloom: 4.5,  colorFondo: 0x0b0b0b }, 
     epic:      { colorMagia: 0x00ffff, fuerzaBloom: 3.5,  colorFondo: 0x0b0b0b }, 
     rare:      { colorMagia: 0x00ff00, fuerzaBloom: 2.5,  colorFondo: 0x0b0b0b }, 
-    common:    { colorMagia: 0x000000, fuerzaBloom: 0.0,  colorFondo: 0x0b0b0b } // Forzado a 0 destello
+    common:    { colorMagia: 0x000000, fuerzaBloom: 0.0,  colorFondo: 0x0b0b0b } 
 };
 
-// --- FUNCIÓN DE CARGA INTELIGENTE DE METADATOS ---
+// --- FUNCIÓN DE CARGA DESDE LA CARPETA LOCAL /metadata/ ---
 async function obtenerConfiguracionNFT(modelId) {
     try {
-        const urlMetadatos = `https://thehistorybehindthepainting.com/api/metadata/${modelId}`; 
+        // Busca directamente el archivo .json en tu estructura local
+        const urlMetadatos = `metadata/${modelId}.json`; 
+        
         const respuesta = await fetch(urlMetadatos);
-        if (!respuesta.ok) throw new Error('No se pudo acceder al servidor de metadatos');
+        if (!respuesta.ok) throw new Error(`No se encontró el archivo: ${urlMetadatos}`);
         
         const metadata = await respuesta.json();
         const rarezaLimpia = metadata.rarity ? metadata.rarity.toLowerCase() : 'common';
         
         const estilosRareza = CONFIGURACION_RAREZAS[rarezaLimpia] || CONFIGURACION_RAREZAS['common'];
 
+        // Fusión inteligente de configuraciones
         return {
             ...CONFIG_POR_DEFECTO,
             rarity: rarezaLimpia,
@@ -54,7 +60,8 @@ async function obtenerConfiguracionNFT(modelId) {
         };
 
     } catch (error) {
-        console.warn("Usando configuración 'Por Defecto' (Común/Fijo) debido a un error:", error.message);
+        // Fallback: Si el JSON no existe, se asume que es un NFT común y estático
+        console.warn(`Aviso: Usando configuración estática por defecto para el ID ${modelId}`);
         return CONFIG_POR_DEFECTO; 
     }
 }
@@ -63,8 +70,9 @@ async function inicializarVisor3D() {
     const urlParams = new URLSearchParams(window.location.search);
     let modelId = urlParams.get('id') || '1';
 
+    // 1. Cargar e inyectar configuración desde los metadatos locales
     const configNFT = await obtenerConfiguracionNFT(modelId);
-    console.log("Configuración activa para el visor:", configNFT);
+    console.log("Configuración aplicada al renderizador:", configNFT);
 
     const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
@@ -178,7 +186,7 @@ async function inicializarVisor3D() {
             const model = gltf.scene;
 
             // ==========================================
-            // SISTEMA DE CAMBIO DE PINTURAS
+            // SISTEMA DE CAMBIO DE PINTURAS (LIENZO)
             // ==========================================
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
@@ -196,7 +204,7 @@ async function inicializarVisor3D() {
                 const texturas = [];
                 let indiceActual = -1; 
 
-                // Cargará únicamente la cantidad definida (1 para común, más para el resto)
+                // Descarga selectiva de imágenes según framesCount del JSON
                 for (let i = 1; i <= configNFT.framesCount; i++) {
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
@@ -208,8 +216,9 @@ async function inicializarVisor3D() {
                     texturas.push(texturaCarga);
                 }
 
+                // --- FUNCIÓN DE ANIMACIÓN DE RESPLANDOR INTELIGENTE ---
                 function hacerTransicionMagica(nuevaTextura) {
-                    // Si la rareza no tiene asignado destello (fuerza 0), cambiamos la textura directamente sin animar
+                    // Si es común u otra rareza sin brillo asignado, cambia la textura en seco
                     if (configNFT.fuerzaBloom <= 0) {
                         lienzo.material.map = nuevaTextura;
                         lienzo.material.needsUpdate = true;
@@ -254,7 +263,7 @@ async function inicializarVisor3D() {
                     animarResplandor();
                 }
 
-                // SÓLO si tiene múltiples frames se activa el intervalo de rotación
+                // Solo se inicia el bucle si el JSON requiere cambios (Múltiples Cuadros)
                 if (configNFT.framesCount > 1 && configNFT.cycleInterval > 0) {
                     setInterval(() => {
                         if (texturas.length > 0) {
@@ -268,12 +277,12 @@ async function inicializarVisor3D() {
 
                             if (texturas[indiceActual]) {
                                 hacerTransicionMagica(texturas[indiceActual]);
-                                console.log(`[${configNFT.rarity.toUpperCase()}] Transición de pintura ejecutada.`);
+                                console.log(`[${configNFT.rarity.toUpperCase()}] Transición de textura completada.`);
                             }
                         }
                     }, configNFT.cycleInterval);
                 } else {
-                    console.log(`[Modo Estático] NFT Común/Fijo detectado. Sin animaciones de transición.`);
+                    console.log(`[Modo Fijo] Renderizado estático sin intervalos de animación.`);
                 }
 
             } else {
