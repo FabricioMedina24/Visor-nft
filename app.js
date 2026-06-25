@@ -17,7 +17,6 @@ requestAnimationFrame(() => {
 // =========================================================================
 // CONFIGURACIÓN POR DEFECTO Y VALORES POR RAREZA
 // =========================================================================
-// Si un JSON no existe o le faltan campos, se usarán estos valores (Modo Común):
 const CONFIG_POR_DEFECTO = {
     rarity: 'common',
     framesCount: 1,         // Una sola imagen fija por defecto
@@ -36,11 +35,11 @@ const CONFIGURACION_RAREZAS = {
     common:    { colorMagia: 0x000000, fuerzaBloom: 0.0,  colorFondo: 0x0b0b0b } 
 };
 
-// --- FUNCIÓN DE CARGA DESDE LA CARPETA LOCAL /metadata/ ---
+// --- FUNCIÓN DE CARGA CORREGIDA PARA BUSCAR nft1.json, nft2.json... ---
 async function obtenerConfiguracionNFT(modelId) {
     try {
-        // Busca directamente el archivo .json en tu estructura local
-        const urlMetadatos = `metadata/${modelId}.json`; 
+        // CORRECCIÓN: Añadido "nft" antes del ID para coincidir con tus archivos nft1.json, nft2.json...
+        const urlMetadatos = `metadata/nft${modelId}.json`; 
         
         const respuesta = await fetch(urlMetadatos);
         if (!respuesta.ok) throw new Error(`No se encontró el archivo: ${urlMetadatos}`);
@@ -50,7 +49,6 @@ async function obtenerConfiguracionNFT(modelId) {
         
         const estilosRareza = CONFIGURACION_RAREZAS[rarezaLimpia] || CONFIGURACION_RAREZAS['common'];
 
-        // Fusión inteligente de configuraciones
         return {
             ...CONFIG_POR_DEFECTO,
             rarity: rarezaLimpia,
@@ -60,8 +58,7 @@ async function obtenerConfiguracionNFT(modelId) {
         };
 
     } catch (error) {
-        // Fallback: Si el JSON no existe, se asume que es un NFT común y estático
-        console.warn(`Aviso: Usando configuración estática por defecto para el ID ${modelId}`);
+        console.warn(`Aviso: Usando configuración estática por defecto debido a: ${error.message}`);
         return CONFIG_POR_DEFECTO; 
     }
 }
@@ -70,11 +67,12 @@ async function inicializarVisor3D() {
     const urlParams = new URLSearchParams(window.location.search);
     let modelId = urlParams.get('id') || '1';
 
-    // 1. Cargar e inyectar configuración desde los metadatos locales
+    // 1. Cargar configuración desde los metadatos locales (ej: metadata/nft1.json)
     const configNFT = await obtenerConfiguracionNFT(modelId);
     console.log("Configuración aplicada al renderizador:", configNFT);
 
-    const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
+    // Ajustado también a tus rutas relativas locales si es necesario
+    const modelPath = `models/nft${modelId}.glb`;
 
     // ==========================================
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
@@ -206,7 +204,7 @@ async function inicializarVisor3D() {
 
                 // Descarga selectiva de imágenes según framesCount del JSON
                 for (let i = 1; i <= configNFT.framesCount; i++) {
-                    const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
+                    const url = `paintings/nft${modelId}/${i}.png`;
                     
                     const texturaCarga = textureLoader.load(url, (txt) => {
                         txt.colorSpace = THREE.SRGBColorSpace;
