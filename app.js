@@ -14,9 +14,47 @@ requestAnimationFrame(() => {
     setTimeout(inicializarVisor3D, 50);
 });
 
-function inicializarVisor3D() {
+// --- NUEVA FUNCIÓN PARA CARGAR METADATOS ---
+async function obtenerMetadatosNFT(modelId) {
+    try {
+        // REEMPLAZA ESTA URL por la ruta real de tu API de metadatos
+        // Ejemplo esperado de JSON: { "rarity": "divine", "name": "Obra Maestra #1" }
+        const urlMetadatos = `https://thehistorybehindthepainting.com/api/metadata/${modelId}`; 
+        const respuesta = await fetch(urlMetadatos);
+        if (!respuesta.ok) throw new Error('No se pudieron obtener los metadatos');
+        const data = await respuesta.json();
+        
+        // Normalizamos a minúsculas para evitar errores de mayúsculas/minúsculas
+        return data.rarity ? data.rarity.toLowerCase() : 'common';
+    } catch (error) {
+        console.warn("Error cargando metadatos, asignando rareza 'common' por defecto:", error);
+        return 'common'; 
+    }
+}
+
+// Convertimos la función principal a 'async' para poder usar 'await' con los metadatos
+async function inicializarVisor3D() {
     const urlParams = new URLSearchParams(window.location.search);
     let modelId = urlParams.get('id') || '1';
+
+    // 1. OBTENER RAREZA ANTES DE CONTINUAR
+    const rareza = await obtenerMetadatosNFT(modelId);
+    console.log(`Rareza detectada para el NFT ${modelId}: ${rareza}`);
+
+    // ==========================================
+    // CONFIGURACIÓN DE EFECTOS SEGÚN RAREZA
+    // ==========================================
+    // Aquí defines qué color y qué fuerza tendrá el destello "mágico" según su rareza
+    const configuracionRareza = {
+        divine:    { colorMagia: 0xff00ff, fuerzaBloom: 6.0,  colorFondo: 0x05000a }, // Morado místico / Fondo cósmico
+        legendary: { colorMagia: 0xffeaba, fuerzaBloom: 4.5,  colorFondo: 0x0b0b0b }, // Dorado / Fondo oscuro original
+        epic:      { colorMagia: 0x00ffff, fuerzaBloom: 3.5,  colorFondo: 0x0b0b0b }, // Cian eléctrico
+        rare:      { colorMagia: 0x00ff00, fuerzaBloom: 2.5,  colorFondo: 0x0b0b0b }, // Verde
+        common:    { colorMagia: 0xffffff, fuerzaBloom: 1.5,  colorFondo: 0x0b0b0b }  // Blanco estándar
+    };
+
+    // Si la rareza obtenida no está en la lista, usamos 'common' como respaldo
+    const ajusteVisual = configuracionRareza[rareza] || configuracionRareza['common'];
 
     const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
@@ -24,7 +62,7 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0b0b); 
+    scene.background = new THREE.Color(ajusteVisual.colorFondo); 
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -81,6 +119,7 @@ function inicializarVisor3D() {
     // CONFIGURACIÓN DEL CANAL DE POST-PROCESAMIENTO (BLOOM)
     // ==========================================
     const renderScene = new RenderPass(scene, camera);
+    // Ajustamos la fuerza inicial del Bloom base un poco dependiendo de la rareza si se desea
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
     const outputPass = new OutputPass();
 
@@ -161,41 +200,38 @@ function inicializarVisor3D() {
                     texturas.push(texturaCarga);
                 }
 
-                // --- FUNCIÓN DE ANIMACIÓN DE RESPLANDOR ---
+                // --- FUNCIÓN DE ANIMACIÓN DE RESPLANDOR CON RAREZA ---
                 function hacerTransicionMagica(nuevaTextura) {
-                    const duracion = 1500; // 1.5 segundos de efecto mágico
+                    const duracion = 1500; 
                     const inicio = performance.now();
                     const material = lienzo.material;
 
-                    // Respaldar las propiedades emisivas que traía de Substance Painter
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
                     const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 0;
 
-                    // Color de la magia (Un tono blanco/dorado)
-                    const colorMagia = new THREE.Color(0xffeaba);
+                    // Usamos el color de magia configurado dinámicamente según su metadato
+                    const colorMagia = new THREE.Color(ajusteVisual.colorMagia);
 
                     function animarResplandor() {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
                         if (t >= 1) {
-                            // Fin de la animación: restaurar el estado original del material
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             return;
                         }
 
-                        // Curva en forma de campana: 0 -> 1 -> 0
                         const curvaLuz = Math.sin(t * Math.PI);
 
-                        // Aplicar el brillo progresivamente para activar el Bloom
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
-                        material.emissiveIntensity = curvaLuz * 3.5; // El 3.5 fuerza un brillo cinematográfico
+                        
+                        // Usamos la fuerza de Bloom configurada dinámicamente
+                        material.emissiveIntensity = curvaLuz * ajusteVisual.fuerzaBloom;
 
-                        // Exactamente en el punto máximo de luz (mitad de la animación), cambiamos la foto
                         if (t >= 0.5 && material.map !== nuevaTextura) {
-                            material.color.setHex(0xffffff); // Forzar blanco en el Base Color
+                            material.color.setHex(0xffffff); 
                             material.map = nuevaTextura;
                             material.needsUpdate = true;
                         }
@@ -205,14 +241,12 @@ function inicializarVisor3D() {
 
                     animarResplandor();
                 }
-                // ------------------------------------------
 
                 // Cambio automático aleatorio usando la transición mágica cada 1 minuto
                 setInterval(() => {
                     if (texturas.length > 0) {
                         let nuevoIndice;
                         
-                        // Elegir aleatoriamente evitando repetición
                         do {
                             nuevoIndice = Math.floor(Math.random() * texturas.length);
                         } while (nuevoIndice === indiceActual && texturas.length > 1);
@@ -220,9 +254,8 @@ function inicializarVisor3D() {
                         indiceActual = nuevoIndice;
 
                         if (texturas[indiceActual]) {
-                            // Ejecutamos el destello en lugar de cambiar la textura de golpe
                             hacerTransicionMagica(texturas[indiceActual]);
-                            console.log(`Transición mágica iniciada hacia: ${indiceActual + 1}.png`);
+                            console.log(`[Rareza: ${rareza.toUpperCase()}] Transición mágica hacia: ${indiceActual + 1}.png`);
                         }
                     }
                 }, 60000); 
@@ -230,7 +263,6 @@ function inicializarVisor3D() {
             } else {
                 console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
             }
-            // ==========================================
 
             model.traverse((child) => {
                 if (child.isMesh) {
@@ -244,7 +276,6 @@ function inicializarVisor3D() {
 
             scene.add(model);
             
-            // BORRAR EL CONTENEDOR DE CARGA
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
@@ -268,9 +299,7 @@ function inicializarVisor3D() {
             
             controls.update();
         }, 
-        function (xhr) {
-            // Progreso de carga
-        }, 
+        function (xhr) {}, 
         function (error) {
             console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
             const textElement = document.querySelector('.loading-text');

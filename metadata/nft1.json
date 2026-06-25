@@ -2,6 +2,5 @@
   "id": "1",
   "rarity": "Legendary",
   "frames_count": 10,
-  "cycle_interval": 30000,
-  "glow_color": "0xffeaba"
+  "cycle_interval": 30000
 }
