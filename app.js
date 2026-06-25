@@ -10,62 +10,21 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 let composer; 
 
-// ==========================================
-// INTERCEPTOR DE RAREZA (METADATA)
-// ==========================================
-async function arrancarVisorConRareza() {
+requestAnimationFrame(() => {
+    setTimeout(inicializarVisor3D, 50);
+});
+
+function inicializarVisor3D() {
     const urlParams = new URLSearchParams(window.location.search);
     let modelId = urlParams.get('id') || '1';
 
-    // Valores por defecto (Fallback)
-    let metadata = {
-        rarity: "Common",
-        frames_count: 10,
-        cycle_interval: 60000,
-        glow_color: "0xffeaba" // Mantiene el tono dorado original del primer código por defecto
-    };
-
-    try {
-        const response = await fetch(`https://thehistorybehindthepainting.com/metadata/nft${modelId}.json`);
-        if (response.ok) {
-            metadata = await response.json();
-            console.log(`Rareza detectada: ${metadata.rarity}`);
-        }
-    } catch (e) {
-        console.warn("No se encontró metadata, usando valores por defecto.");
-    }
-
-    requestAnimationFrame(() => {
-        setTimeout(() => inicializarVisor3D(modelId, metadata), 50);
-    });
-}
-
-// Inicializar el flujo con interceptor de datos
-arrancarVisorConRareza();
-
-function inicializarVisor3D(modelId, metadata) {
     const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
     // ==========================================
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-
-    // Diccionario de colores de fondo dinámicos según rareza
-    const coloresFondoPorRareza = {
-        'common': 0x000000,     // Negro
-        'rare': 0x0a2240,       // Azul
-        'epic': 0x3d0c5a,       // Morado
-        'legendary': 0xdfa837,  // Mostaza
-        'divine': 0x8ecae6      // Celeste
-    };
-
-    const rarezaActual = (metadata.rarity || 'common').toLowerCase();
-    const colorDeFondo = coloresFondoPorRareza[rarezaActual] !== undefined 
-        ? coloresFondoPorRareza[rarezaActual] 
-        : 0x0b0b0b; // Color gris oscuro por defecto del primer script
-
-    scene.background = new THREE.Color(colorDeFondo);
+    scene.background = new THREE.Color(0x0b0b0b); 
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -187,31 +146,19 @@ function inicializarVisor3D(modelId, metadata) {
             if (lienzo && lienzo.material) {
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
-                const totalImagenes = metadata.frames_count || 1; // Dinámico por metadata
-                let indiceActual = 0; 
+                const totalImagenes = 10; 
+                let indiceActual = -1; 
 
-                // Precarga ordenada e indexada de imágenes con extensión .png fija
+                // Precarga de imágenes
                 for (let i = 1; i <= totalImagenes; i++) {
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
-                    textureLoader.load(url, (txt) => {
+                    const texturaCarga = textureLoader.load(url, (txt) => {
                         txt.colorSpace = THREE.SRGBColorSpace;
                         txt.flipY = false; 
-                        
-                        // Guardamos estructurado para poder ordenar al final
-                        texturas.push({ id: i, map: txt });
-
-                        // Asignar inmediatamente el primer frame que cargue
-                        if (texturas.length === 1) {
-                            lienzo.material.map = txt;
-                            lienzo.material.needsUpdate = true;
-                        }
-
-                        // Cuando se terminen de cargar todos, forzamos el orden correcto secuencial
-                        if (texturas.length === totalImagenes) {
-                            texturas.sort((a, b) => a.id - b.id);
-                        }
                     });
+
+                    texturas.push(texturaCarga);
                 }
 
                 // --- FUNCIÓN DE ANIMACIÓN DE RESPLANDOR ---
@@ -224,8 +171,8 @@ function inicializarVisor3D(modelId, metadata) {
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
                     const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 0;
 
-                    // Color de la magia dinámico extraído de la metadata
-                    const colorMagia = new THREE.Color(parseInt(metadata.glow_color || "0xffeaba", 16));
+                    // Color de la magia (Un tono blanco/dorado)
+                    const colorMagia = new THREE.Color(0xffeaba);
 
                     function animarResplandor() {
                         const ahora = performance.now();
@@ -241,16 +188,15 @@ function inicializarVisor3D(modelId, metadata) {
                         // Curva en forma de campana: 0 -> 1 -> 0
                         const curvaLuz = Math.sin(t * Math.PI);
 
-                        // Aplicar el brillo progresivamente para activar el Bloom cinematográfico
+                        // Aplicar el brillo progresivamente para activar el Bloom
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
-                        material.emissiveIntensity = curvaLuz * 3.5; // Mantiene el factor 3.5 para forzar el bloom cinematográfico
+                        material.emissiveIntensity = curvaLuz * 3.5; // El 3.5 fuerza un brillo cinematográfico
 
                         // Exactamente en el punto máximo de luz (mitad de la animación), cambiamos la foto
                         if (t >= 0.5 && material.map !== nuevaTextura) {
                             material.color.setHex(0xffffff); // Forzar blanco en el Base Color
                             material.map = nuevaTextura;
-                            material.emissiveMap = nuevaTextura; // Sincroniza el mapa emisivo para un glow perfecto de la pintura
                             material.needsUpdate = true;
                         }
 
@@ -261,16 +207,25 @@ function inicializarVisor3D(modelId, metadata) {
                 }
                 // ------------------------------------------
 
-                // Cambio automático secuencial según el intervalo de la metadata
-                if (totalImagenes > 1) {
-                    setInterval(() => {
-                        if (texturas.length === totalImagenes) {
-                            indiceActual = (indiceActual + 1) % texturas.length;
-                            hacerTransicionMagica(texturas[indiceActual].map);
-                            console.log(`Transición mágica secuencial iniciada hacia frame index: ${indiceActual + 1}`);
+                // Cambio automático aleatorio usando la transición mágica cada 1 minuto
+                setInterval(() => {
+                    if (texturas.length > 0) {
+                        let nuevoIndice;
+                        
+                        // Elegir aleatoriamente evitando repetición
+                        do {
+                            nuevoIndice = Math.floor(Math.random() * texturas.length);
+                        } while (nuevoIndice === indiceActual && texturas.length > 1);
+                        
+                        indiceActual = nuevoIndice;
+
+                        if (texturas[indiceActual]) {
+                            // Ejecutamos el destello en lugar de cambiar la textura de golpe
+                            hacerTransicionMagica(texturas[indiceActual]);
+                            console.log(`Transición mágica iniciada hacia: ${indiceActual + 1}.png`);
                         }
-                    }, metadata.cycle_interval); 
-                }
+                    }
+                }, 60000); 
 
             } else {
                 console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
