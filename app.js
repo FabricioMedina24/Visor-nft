@@ -11,17 +11,18 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 let composer; 
 
 // ==========================================
-// 1. INTERCEPTOR DE RAREZA (METADATA)
+// INTERCEPTOR DE RAREZA (METADATA)
 // ==========================================
 async function arrancarVisorConRareza() {
     const urlParams = new URLSearchParams(window.location.search);
     let modelId = urlParams.get('id') || '1';
 
+    // Valores por defecto (Fallback)
     let metadata = {
         rarity: "Common",
         frames_count: 10,
         cycle_interval: 60000,
-        glow_color: "0xffffff"
+        glow_color: "0xffeaba" // Mantiene el tono dorado original del primer código por defecto
     };
 
     try {
@@ -39,11 +40,9 @@ async function arrancarVisorConRareza() {
     });
 }
 
+// Inicializar el flujo con interceptor de datos
 arrancarVisorConRareza();
 
-// ==========================================
-// 2. FUNCIÓN PRINCIPAL DEL VISOR
-// ==========================================
 function inicializarVisor3D(modelId, metadata) {
     const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
@@ -64,7 +63,7 @@ function inicializarVisor3D(modelId, metadata) {
     const rarezaActual = (metadata.rarity || 'common').toLowerCase();
     const colorDeFondo = coloresFondoPorRareza[rarezaActual] !== undefined 
         ? coloresFondoPorRareza[rarezaActual] 
-        : 0x0b0b0b;
+        : 0x0b0b0b; // Color gris oscuro por defecto del primer script
 
     scene.background = new THREE.Color(colorDeFondo);
 
@@ -171,6 +170,9 @@ function inicializarVisor3D(modelId, metadata) {
         function (gltf) {
             const model = gltf.scene;
 
+            // ==========================================
+            // SISTEMA DE CAMBIO DE PINTURAS (ANIMACIÓN MÁGICA)
+            // ==========================================
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
 
@@ -185,81 +187,101 @@ function inicializarVisor3D(modelId, metadata) {
             if (lienzo && lienzo.material) {
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
-                const totalImagenes = metadata.frames_count || 1; 
+                const totalImagenes = metadata.frames_count || 1; // Dinámico por metadata
                 let indiceActual = 0; 
 
-                // Precarga de imágenes .png exacta según la rareza
+                // Precarga ordenada e indexada de imágenes con extensión .png fija
                 for (let i = 1; i <= totalImagenes; i++) {
-                    // CAMBIO REALIZADO: Ahora busca extension .png
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
                     textureLoader.load(url, (txt) => {
                         txt.colorSpace = THREE.SRGBColorSpace;
                         txt.flipY = false; 
                         
+                        // Guardamos estructurado para poder ordenar al final
                         texturas.push({ id: i, map: txt });
 
+                        // Asignar inmediatamente el primer frame que cargue
                         if (texturas.length === 1) {
                             lienzo.material.map = txt;
                             lienzo.material.needsUpdate = true;
                         }
 
+                        // Cuando se terminen de cargar todos, forzamos el orden correcto secuencial
                         if (texturas.length === totalImagenes) {
                             texturas.sort((a, b) => a.id - b.id);
                         }
                     });
                 }
 
+                // --- FUNCIÓN DE ANIMACIÓN DE RESPLANDOR ---
                 function hacerTransicionMagica(nuevaTextura) {
-                    const duracion = 1500; 
+                    const duracion = 1500; // 1.5 segundos de efecto mágico
                     const inicio = performance.now();
                     const material = lienzo.material;
 
+                    // Respaldar las propiedades emisivas que traía de Substance Painter
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
-                    const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 1.0;
-                    const colorMagia = new THREE.Color(parseInt(metadata.glow_color || "0xffffff", 16));
+                    const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 0;
+
+                    // Color de la magia dinámico extraído de la metadata
+                    const colorMagia = new THREE.Color(parseInt(metadata.glow_color || "0xffeaba", 16));
 
                     function animarResplandor() {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
                         if (t >= 1) {
+                            // Fin de la animación: restaurar el estado original del material
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             return;
                         }
 
+                        // Curva en forma de campana: 0 -> 1 -> 0
                         const curvaLuz = Math.sin(t * Math.PI);
+
+                        // Aplicar el brillo progresivamente para activar el Bloom cinematográfico
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
-                        material.emissiveIntensity = intensidadOriginal; 
+                        material.emissiveIntensity = curvaLuz * 3.5; // Mantiene el factor 3.5 para forzar el bloom cinematográfico
 
+                        // Exactamente en el punto máximo de luz (mitad de la animación), cambiamos la foto
                         if (t >= 0.5 && material.map !== nuevaTextura) {
-                            material.color.setHex(0xffffff); 
+                            material.color.setHex(0xffffff); // Forzar blanco en el Base Color
                             material.map = nuevaTextura;
-                            material.emissiveMap = nuevaTextura;
+                            material.emissiveMap = nuevaTextura; // Sincroniza el mapa emisivo para un glow perfecto de la pintura
                             material.needsUpdate = true;
                         }
+
                         requestAnimationFrame(animarResplandor);
                     }
+
                     animarResplandor();
                 }
+                // ------------------------------------------
 
+                // Cambio automático secuencial según el intervalo de la metadata
                 if (totalImagenes > 1) {
                     setInterval(() => {
                         if (texturas.length === totalImagenes) {
                             indiceActual = (indiceActual + 1) % texturas.length;
                             hacerTransicionMagica(texturas[indiceActual].map);
+                            console.log(`Transición mágica secuencial iniciada hacia frame index: ${indiceActual + 1}`);
                         }
                     }, metadata.cycle_interval); 
                 }
 
-            } 
+            } else {
+                console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
+            }
+            // ==========================================
 
             model.traverse((child) => {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+                    
                     mat.envMapIntensity = 1.0; 
                     mat.needsUpdate = true;
                 }
@@ -267,41 +289,67 @@ function inicializarVisor3D(modelId, metadata) {
 
             scene.add(model);
             
+            // BORRAR EL CONTENEDOR DE CARGA
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
-                setTimeout(() => loaderContainer.remove(), 400);
+                setTimeout(() => {
+                    loaderContainer.remove();
+                }, 400);
             }
             
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
+            
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
+            
             controls.minDistance = maxDim * 0.45; 
             controls.maxDistance = maxDim * 4.0; 
+
             camera.position.set(center.x, center.y, center.z + (maxDim * 0.9));
             camera.lookAt(center);
+            
             controls.update();
+        }, 
+        function (xhr) {
+            // Progreso de carga
+        }, 
+        function (error) {
+            console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
+            const textElement = document.querySelector('.loading-text');
+            if (textElement) textElement.innerText = "Error al conectar al modelo";
         }
     );
 
+    // ==========================================
+    // BUCLE DE ANIMACIÓN
+    // ==========================================
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 
-        composer ? composer.render() : renderer.render(scene, camera);
+        
+        if (composer) {
+            composer.render();
+        } else {
+            renderer.render(scene, camera);
+        }
     }
     animate();
 
     function resizeViewer() {
-        const width = window.innerWidth, height = window.innerHeight;
+        const width = window.innerWidth || document.documentElement.clientWidth;
+        const height = window.innerHeight || document.documentElement.clientHeight;
         if (width > 0 && height > 0) {
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            
             if (composer) composer.setSize(width, height);
         }
     }
+
     window.addEventListener('resize', resizeViewer);
     resizeViewer();
 }
