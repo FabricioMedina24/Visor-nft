@@ -42,14 +42,14 @@ async function arrancarVisorConRareza() {
 arrancarVisorConRareza();
 
 // ==========================================
-// 2. FUNCIÓN PRINCIPAL DEL VISOR (MANTENIDA ÍNTEGRA)
+// 2. FUNCIÓN PRINCIPAL DEL VISOR (COMPLETA E ÍNTEGRA)
 // ==========================================
 function inicializarVisor3D(modelId, metadata) {
     const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     const scene = new THREE.Scene();
-
+    
     // Diccionario de colores de fondo según rareza
     const coloresFondoPorRareza = {
         'common': 0x000000, 'rare': 0x0a2240, 'epic': 0x3d0c5a, 
@@ -70,25 +70,31 @@ function inicializarVisor3D(modelId, metadata) {
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
 
-    // ROTACIÓN AUTOMÁTICA
+    // LÓGICA DE ROTACIÓN AUTOMÁTICA
+    let isUserInteracting = false;
     let autoRotateTimeout;
+
     function startAutoRotation() { controls.autoRotate = true; controls.autoRotateSpeed = 1.0; }
     function resetInactivityTimer() {
         controls.autoRotate = false;
+        isUserInteracting = true;
         clearTimeout(autoRotateTimeout);
-        autoRotateTimeout = setTimeout(startAutoRotation, 5000);
+        autoRotateTimeout = setTimeout(() => { isUserInteracting = false; startAutoRotation(); }, 5000);
     }
-    controls.addEventListener('start', () => { controls.autoRotate = false; clearTimeout(autoRotateTimeout); });
+    controls.addEventListener('start', () => { isUserInteracting = true; controls.autoRotate = false; clearTimeout(autoRotateTimeout); });
     controls.addEventListener('end', resetInactivityTimer);
     startAutoRotation();
 
-    // POST-PROCESAMIENTO (BLOOM)
+    // CONFIGURACIÓN DEL CANAL DE BLOOM
+    const renderScene = new RenderPass(scene, camera);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
+    const outputPass = new OutputPass();
     composer = new EffectComposer(renderer);
-    composer.addPass(new RenderPass(scene, camera));
-    composer.addPass(new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5));
-    composer.addPass(new OutputPass());
+    composer.addPass(renderScene);
+    composer.addPass(bloomPass); 
+    composer.addPass(outputPass);
 
-    // ILUMINACIÓN Y ENTORNO
+    // ILUMINACIÓN Y HDRI
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
     const envScene = new THREE.Scene();
@@ -101,84 +107,92 @@ function inicializarVisor3D(modelId, metadata) {
     camera.add(cameraLight);
     scene.add(camera);
 
-    // CARGA DE MODELO Y LIENZO
-    new GLTFLoader().load(modelPath, (gltf) => {
+    // CARGA DEL MODELO 3D
+    const loader = new GLTFLoader();
+    loader.setCrossOrigin('anonymous');
+    loader.load(modelPath, function (gltf) {
         const model = gltf.scene;
+        
+        // LÓGICA DE LIENZO Y TEXTURAS
         const nodoLienzo = model.getObjectByName('LIENZO');
         let lienzo = null;
         nodoLienzo?.traverse((child) => { if (child.isMesh && child.material) lienzo = child; });
-
+        
         if (lienzo && lienzo.material) {
             const textureLoader = new THREE.TextureLoader();
             const texturas = [];
-            
-            // Carga de PNGs secuencial
-            for (let i = 1; i <= metadata.frames_count; i++) {
+            const totalImagenes = metadata.frames_count || 1; 
+            let indiceActual = 0; 
+
+            for (let i = 1; i <= totalImagenes; i++) {
                 textureLoader.load(`https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`, (txt) => {
                     txt.colorSpace = THREE.SRGBColorSpace;
                     txt.flipY = false;
                     texturas.push({ id: i, map: txt });
                     if (texturas.length === 1) { lienzo.material.map = txt; lienzo.material.needsUpdate = true; }
-                    if (texturas.length === metadata.frames_count) texturas.sort((a, b) => a.id - b.id);
+                    if (texturas.length === totalImagenes) texturas.sort((a, b) => a.id - b.id);
                 });
             }
 
-            // TRANSICIÓN MÁGICA (INTENSA Y NATURAL)
+            // TRANSICIÓN MÁGICA ORIGINAL
             function hacerTransicionMagica(nuevaTextura) {
                 const duracion = 1500;
                 const inicio = performance.now();
                 const mat = lienzo.material;
+                const emisionOriginal = mat.emissive ? mat.emissive.clone() : new THREE.Color(0x000000);
+                const intensidadOriginal = mat.emissiveIntensity !== undefined ? mat.emissiveIntensity : 1.0;
                 const colorMagia = new THREE.Color(parseInt(metadata.glow_color || "0xffffff", 16));
-                
-                function animar() {
+
+                function animarResplandor() {
                     const t = (performance.now() - inicio) / duracion;
-                    if (t >= 1) { mat.emissiveIntensity = 1.0; return; }
-                    
-                    // Curva de destello "mágico" (Fade-out más natural)
-                    const curvaLuz = Math.sin(t * Math.PI); 
-                    
+                    if (t >= 1) { mat.emissive.copy(emisionOriginal); mat.emissiveIntensity = intensidadOriginal; return; }
+                    const curvaLuz = Math.sin(t * Math.PI);
                     if (!mat.emissive) mat.emissive = new THREE.Color(0x000000);
                     mat.emissive.copy(colorMagia);
-                    // Intensidad 6.0 para cubrir el cambio de imagen
-                    mat.emissiveIntensity = curvaLuz * 6.0; 
-                    
+                    mat.emissiveIntensity = curvaLuz * 3.5;
                     if (t >= 0.5 && mat.map !== nuevaTextura) {
                         mat.map = nuevaTextura;
                         mat.emissiveMap = nuevaTextura;
                         mat.needsUpdate = true;
                     }
-                    requestAnimationFrame(animar);
+                    requestAnimationFrame(animarResplandor);
                 }
-                animar();
+                animarResplandor();
             }
 
-            // ESPERAR 1 MINUTO ANTES DE INICIAR EL CICLO
-            if (metadata.frames_count > 1) {
-                setTimeout(() => {
-                    setInterval(() => {
-                        if (texturas.length === metadata.frames_count) {
-                            let idx = (texturas.findIndex(t => t.map === lienzo.material.map) + 1) % texturas.length;
-                            hacerTransicionMagica(texturas[idx].map);
-                        }
-                    }, metadata.cycle_interval);
-                }, 60000); // 1 minuto de espera inicial
+            if (totalImagenes > 1) {
+                setInterval(() => {
+                    if (texturas.length === totalImagenes) {
+                        indiceActual = (indiceActual + 1) % texturas.length;
+                        hacerTransicionMagica(texturas[indiceActual].map);
+                    }
+                }, metadata.cycle_interval);
             }
         }
+
+        model.traverse((child) => {
+            if (child.isMesh) {
+                const mat = child.material;
+                if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
+                mat.envMapIntensity = 1.0; 
+                mat.needsUpdate = true;
+            }
+        });
 
         scene.add(model);
         document.getElementById('loader-container')?.remove();
         
-        // Ajuste de cámara
         const box = new THREE.Box3().setFromObject(model);
         const size = box.getSize(new THREE.Vector3());
         const center = box.getCenter(new THREE.Vector3());
         controls.target.copy(center);
-        camera.position.set(center.x, center.y, center.z + (Math.max(size.x, size.y, size.z) * 0.9));
+        const maxDim = Math.max(size.x, size.y, size.z);
+        camera.position.set(center.x, center.y, center.z + (maxDim * 0.9));
         camera.lookAt(center);
         controls.update();
     });
 
-    // ANIMACIÓN FINAL
+    // BUCLE DE ANIMACIÓN
     function animate() {
         requestAnimationFrame(animate);
         controls.update();
