@@ -10,21 +10,63 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 let composer; 
 
-requestAnimationFrame(() => {
-    setTimeout(inicializarVisor3D, 50);
-});
-
-function inicializarVisor3D() {
+// ==========================================
+// 1. INTERCEPTOR DE RAREZA (METADATA)
+// ==========================================
+async function arrancarVisorConRareza() {
     const urlParams = new URLSearchParams(window.location.search);
     let modelId = urlParams.get('id') || '1';
 
+    let metadata = {
+        rarity: "Common",
+        frames_count: 10,
+        cycle_interval: 60000,
+        glow_color: "0xffffff"
+    };
+
+    try {
+        const response = await fetch(`https://thehistorybehindthepainting.com/metadata/nft${modelId}.json`);
+        if (response.ok) {
+            metadata = await response.json();
+            console.log(`Rareza detectada: ${metadata.rarity}`);
+        }
+    } catch (e) {
+        console.warn("No se encontró metadata, usando valores por defecto.");
+    }
+
+    requestAnimationFrame(() => {
+        setTimeout(() => inicializarVisor3D(modelId, metadata), 50);
+    });
+}
+
+arrancarVisorConRareza();
+
+// ==========================================
+// 2. FUNCIÓN PRINCIPAL DEL VISOR
+// ==========================================
+function inicializarVisor3D(modelId, metadata) {
     const modelPath = `https://thehistorybehindthepainting.com/models/nft${modelId}.glb`;
 
     // ==========================================
     // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
     // ==========================================
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b0b0b); 
+
+    // Diccionario de colores de fondo dinámicos según rareza
+    const coloresFondoPorRareza = {
+        'common': 0x000000,     // Negro
+        'rare': 0x0a2240,       // Azul
+        'epic': 0x3d0c5a,       // Morado
+        'legendary': 0xdfa837,  // Mostaza
+        'divine': 0x8ecae6      // Celeste
+    };
+
+    const rarezaActual = (metadata.rarity || 'common').toLowerCase();
+    const colorDeFondo = coloresFondoPorRareza[rarezaActual] !== undefined 
+        ? coloresFondoPorRareza[rarezaActual] 
+        : 0x0b0b0b;
+
+    scene.background = new THREE.Color(colorDeFondo);
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -129,9 +171,6 @@ function inicializarVisor3D() {
         function (gltf) {
             const model = gltf.scene;
 
-            // ==========================================
-            // SISTEMA DE CAMBIO DE PINTURAS (ANIMACIÓN MÁGICA)
-            // ==========================================
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
 
@@ -146,97 +185,81 @@ function inicializarVisor3D() {
             if (lienzo && lienzo.material) {
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
-                const totalImagenes = 10; 
-                let indiceActual = -1; 
+                const totalImagenes = metadata.frames_count || 1; 
+                let indiceActual = 0; 
 
-                // Precarga de imágenes
+                // Precarga de imágenes .png exacta según la rareza
                 for (let i = 1; i <= totalImagenes; i++) {
+                    // CAMBIO REALIZADO: Ahora busca extension .png
                     const url = `https://thehistorybehindthepainting.com/paintings/nft${modelId}/${i}.png`;
                     
-                    const texturaCarga = textureLoader.load(url, (txt) => {
+                    textureLoader.load(url, (txt) => {
                         txt.colorSpace = THREE.SRGBColorSpace;
                         txt.flipY = false; 
-                    });
+                        
+                        texturas.push({ id: i, map: txt });
 
-                    texturas.push(texturaCarga);
+                        if (texturas.length === 1) {
+                            lienzo.material.map = txt;
+                            lienzo.material.needsUpdate = true;
+                        }
+
+                        if (texturas.length === totalImagenes) {
+                            texturas.sort((a, b) => a.id - b.id);
+                        }
+                    });
                 }
 
-                // --- FUNCIÓN DE ANIMACIÓN DE RESPLANDOR ---
                 function hacerTransicionMagica(nuevaTextura) {
-                    const duracion = 1500; // 1.5 segundos de efecto mágico
+                    const duracion = 1500; 
                     const inicio = performance.now();
                     const material = lienzo.material;
 
-                    // Respaldar las propiedades emisivas que traía de Substance Painter
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
-                    const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 0;
-
-                    // Color de la magia (Un tono blanco/dorado)
-                    const colorMagia = new THREE.Color(0xffeaba);
+                    const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 1.0;
+                    const colorMagia = new THREE.Color(parseInt(metadata.glow_color || "0xffffff", 16));
 
                     function animarResplandor() {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
                         if (t >= 1) {
-                            // Fin de la animación: restaurar el estado original del material
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             return;
                         }
 
-                        // Curva en forma de campana: 0 -> 1 -> 0
                         const curvaLuz = Math.sin(t * Math.PI);
-
-                        // Aplicar el brillo progresivamente para activar el Bloom
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
-                        material.emissiveIntensity = curvaLuz * 3.5; // El 3.5 fuerza un brillo cinematográfico
+                        material.emissiveIntensity = intensidadOriginal; 
 
-                        // Exactamente en el punto máximo de luz (mitad de la animación), cambiamos la foto
                         if (t >= 0.5 && material.map !== nuevaTextura) {
-                            material.color.setHex(0xffffff); // Forzar blanco en el Base Color
+                            material.color.setHex(0xffffff); 
                             material.map = nuevaTextura;
+                            material.emissiveMap = nuevaTextura;
                             material.needsUpdate = true;
                         }
-
                         requestAnimationFrame(animarResplandor);
                     }
-
                     animarResplandor();
                 }
-                // ------------------------------------------
 
-                // Cambio automático aleatorio usando la transición mágica cada 1 minuto
-                setInterval(() => {
-                    if (texturas.length > 0) {
-                        let nuevoIndice;
-                        
-                        // Elegir aleatoriamente evitando repetición
-                        do {
-                            nuevoIndice = Math.floor(Math.random() * texturas.length);
-                        } while (nuevoIndice === indiceActual && texturas.length > 1);
-                        
-                        indiceActual = nuevoIndice;
-
-                        if (texturas[indiceActual]) {
-                            // Ejecutamos el destello en lugar de cambiar la textura de golpe
-                            hacerTransicionMagica(texturas[indiceActual]);
-                            console.log(`Transición mágica iniciada hacia: ${indiceActual + 1}.png`);
+                if (totalImagenes > 1) {
+                    setInterval(() => {
+                        if (texturas.length === totalImagenes) {
+                            indiceActual = (indiceActual + 1) % texturas.length;
+                            hacerTransicionMagica(texturas[indiceActual].map);
                         }
-                    }
-                }, 60000); 
+                    }, metadata.cycle_interval); 
+                }
 
-            } else {
-                console.warn('Sigue sin encontrarse el Mesh o Material válido de LIENZO.');
-            }
-            // ==========================================
+            } 
 
             model.traverse((child) => {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
-                    
                     mat.envMapIntensity = 1.0; 
                     mat.needsUpdate = true;
                 }
@@ -244,67 +267,41 @@ function inicializarVisor3D() {
 
             scene.add(model);
             
-            // BORRAR EL CONTENEDOR DE CARGA
             const loaderContainer = document.getElementById('loader-container');
             if (loaderContainer) {
                 loaderContainer.style.opacity = '0';
-                setTimeout(() => {
-                    loaderContainer.remove();
-                }, 400);
+                setTimeout(() => loaderContainer.remove(), 400);
             }
             
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
-            
             controls.target.copy(center);
             const maxDim = Math.max(size.x, size.y, size.z);
-            
             controls.minDistance = maxDim * 0.45; 
             controls.maxDistance = maxDim * 4.0; 
-
             camera.position.set(center.x, center.y, center.z + (maxDim * 0.9));
             camera.lookAt(center);
-            
             controls.update();
-        }, 
-        function (xhr) {
-            // Progreso de carga
-        }, 
-        function (error) {
-            console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
-            const textElement = document.querySelector('.loading-text');
-            if (textElement) textElement.innerText = "Error al conectar al modelo";
         }
     );
 
-    // ==========================================
-    // BUCLE DE ANIMACIÓN
-    // ==========================================
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 
-        
-        if (composer) {
-            composer.render();
-        } else {
-            renderer.render(scene, camera);
-        }
+        composer ? composer.render() : renderer.render(scene, camera);
     }
     animate();
 
     function resizeViewer() {
-        const width = window.innerWidth || document.documentElement.clientWidth;
-        const height = window.innerHeight || document.documentElement.clientHeight;
+        const width = window.innerWidth, height = window.innerHeight;
         if (width > 0 && height > 0) {
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
-            
             if (composer) composer.setSize(width, height);
         }
     }
-
     window.addEventListener('resize', resizeViewer);
     resizeViewer();
 }

@@ -1,0 +1,7 @@
+{
+  "id": "1",
+  "rarity": "Legendary",
+  "frames_count": 10,
+  "cycle_interval": 60000,
+  "glow_color": "0xffeaba"
+}
