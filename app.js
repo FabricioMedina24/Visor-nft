@@ -203,15 +203,14 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: EXPLOSIÓN SUAVE Y CORTA DE BRILLANTINA
+            // FUNCIÓN: EXPLOSIÓN SUAVE CON DISIPACIÓN MULTIDIRECCIONAL
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                // MUCHO MENOS PARTÍCULAS: Detalle muy sutil
-                const cantidad = 35; 
+                const cantidad = 35; // Se mantienen pocas partículas
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
@@ -224,10 +223,12 @@ async function inicializarVisor3D() {
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
                     posiciones[i * 3 + 2] = centroLienzo.z + 0.02; 
 
+                    // DISIPACIÓN EN DISTINTAS DIRECCIONES:
+                    // Ahora se expanden aleatoriamente hacia todos lados (arriba, abajo, izquierda, derecha)
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.0015,
-                        y: (Math.random() - 0.2) * 0.0015,
-                        z: (Math.random() * 0.002) + 0.0005 
+                        x: (Math.random() - 0.5) * 0.008, // Izquierda / Derecha
+                        y: (Math.random() - 0.5) * 0.008, // Arriba / Abajo
+                        z: (Math.random() * 0.004) + 0.002 // Hacia adelante en distintos grados
                     });
                 }
 
@@ -252,8 +253,7 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    // DECAIMIENTO MÁS RÁPIDO: Mueren antes y viajan menos distancia
-                    decaimiento: 0.004 + (Math.random() * 0.003), 
+                    decaimiento: 0.004 + (Math.random() * 0.003), // Desaparecen rápido (corta distancia)
                     semillaAnimacion: Math.random() * 100 
                 });
             }
@@ -347,7 +347,7 @@ async function inicializarVisor3D() {
                 }
 
                 // =======================================================
-                // TRANSICIÓN CON TEMBLOR INTENSO
+                // TRANSICIÓN CON TEMBLOR INTENSO Y DISIPACIÓN
                 // =======================================================
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
@@ -384,11 +384,7 @@ async function inicializarVisor3D() {
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
                         material.emissiveIntensity = curvaLuz * configNFT.fuerzaBloom;
 
-                        // =======================================================
-                        // LÓGICA DE TEMBLOR MÁS INTENSO
-                        // =======================================================
                         if (t < 0.5) {
-                            // MULTIPLICADOR AUMENTADO (De 0.012 a 0.03 para sacudida fuerte)
                             const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * 0.03; 
                             
                             model.position.set(
@@ -397,7 +393,6 @@ async function inicializarVisor3D() {
                                 posOriginal.z + (Math.random() - 0.5) * intensidadTemblor
                             );
                         } else {
-                            // Se queda completamente quieto tras la liberación
                             model.position.copy(posOriginal);
                         }
 
@@ -483,6 +478,7 @@ async function inicializarVisor3D() {
                 posiciones[j * 3 + 1] += sistema.velocidades[j].y;   
                 posiciones[j * 3 + 2] += sistema.velocidades[j].z;   
 
+                // Leve movimiento mágico orgánico mientras se expanden
                 posiciones[j * 3] += Math.sin(tiempoMundial * 1.5 + j + sistema.semillaAnimacion) * 0.0003; 
                 posiciones[j * 3 + 1] += Math.cos(tiempoMundial * 1.2 + j + sistema.semillaAnimacion) * 0.0002;
             }
