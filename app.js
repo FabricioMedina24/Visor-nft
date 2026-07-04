@@ -203,65 +203,46 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: CREAR BRILLANTINA EN EL CONTORNO
+            // FUNCIÓN: EXPLOSIÓN DE BRILLANTINA HACIA ADELANTE
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 120; // Cantidad de brillantina
+                const cantidad = 150; // Aumentado un poco por ser más pequeñas
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
 
                 for(let i = 0; i < cantidad; i++) {
-                    const borde = Math.random();
-                    let offsetX = 0, offsetY = 0;
-
-                    // Distribuir a lo largo de los 4 contornos del cuadro
-                    if (borde < 0.25) { // Arriba
-                        offsetX = (Math.random() - 0.5) * tamanoLienzo.x;
-                        offsetY = tamanoLienzo.y * 0.5;
-                    } else if (borde < 0.5) { // Abajo
-                        offsetX = (Math.random() - 0.5) * tamanoLienzo.x;
-                        offsetY = -tamanoLienzo.y * 0.5;
-                    } else if (borde < 0.75) { // Izquierda
-                        offsetX = -tamanoLienzo.x * 0.5;
-                        offsetY = (Math.random() - 0.5) * tamanoLienzo.y;
-                    } else { // Derecha
-                        offsetX = tamanoLienzo.x * 0.5;
-                        offsetY = (Math.random() - 0.5) * tamanoLienzo.y;
-                    }
-
-                    // Pequeña variación de ruido para que no sea una línea rígida
-                    offsetX += (Math.random() - 0.5) * (tamanoLienzo.x * 0.1);
-                    offsetY += (Math.random() - 0.5) * (tamanoLienzo.y * 0.1);
+                    // Nacen en cualquier parte de toda la superficie del lienzo
+                    const offsetX = (Math.random() - 0.5) * tamanoLienzo.x * 0.95;
+                    const offsetY = (Math.random() - 0.5) * tamanoLienzo.y * 0.95;
 
                     posiciones[i * 3] = centroLienzo.x + offsetX; 
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
-                    posiciones[i * 3 + 2] = centroLienzo.z + (Math.random() * 0.05) + 0.01; 
+                    // Nacen ligeramente por delante de la pintura para no chocar con el 3D
+                    posiciones[i * 3 + 2] = centroLienzo.z + 0.02; 
 
                     // =======================================================
-                    // NUEVO: SE EXPANDEN EN TODAS LAS DIRECCIONES ALEATORIAMENTE
+                    // VELOCIDAD: HACIA ADELANTE CON DISPERSIÓN (Forma de cono)
                     // =======================================================
-                    // Multiplicar por un factor aleatorio entre negativo y positivo
-                    // Esto permite que vayan arriba, abajo, izquierda, derecha, adelante o atrás.
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.008, 
-                        y: (Math.random() - 0.5) * 0.008, 
-                        z: (Math.random() - 0.5) * 0.008  
+                        x: (Math.random() - 0.5) * 0.008, // Se abren hacia la izquierda o derecha
+                        y: (Math.random() - 0.5) * 0.008, // Se abren hacia arriba o abajo
+                        z: (Math.random() * 0.012) + 0.002 // Siempre hacia adelante (hacia la cámara)
                     });
                 }
 
                 geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
 
-                // Multiplicar el color x 3 para que el Bloom las haga brillar al máximo
+                // Multiplicar el color x 3 para que el Bloom las haga brillar
                 const colorMagiaBrillante = new THREE.Color(colorHex).multiplyScalar(3.0);
 
                 const materialParticulas = new THREE.PointsMaterial({
                     color: colorMagiaBrillante,
-                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.006, // Tamaño de brillantina
+                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.0035, // Aún más pequeñas, polvo de estrellas
                     map: texturaParticula, 
                     transparent: true,
                     opacity: 1,
@@ -276,8 +257,7 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    // Decaimiento mucho más lento (duran mucho más flotando)
-                    decaimiento: 0.001 + (Math.random() * 0.0015) 
+                    decaimiento: 0.001 + (Math.random() * 0.0015) // Desaparecen lentamente
                 });
             }
 
@@ -473,7 +453,6 @@ async function inicializarVisor3D() {
                 continue;
             }
 
-            // Usamos un ligero "ease-out" para la opacidad, así brilla más tiempo antes de apagar del todo
             sistema.mesh.material.opacity = Math.pow(Math.max(0, sistema.vida), 0.5);
             
             const posiciones = sistema.mesh.geometry.attributes.position.array;
