@@ -178,10 +178,10 @@ async function inicializarVisor3D() {
             if (lienzo && lienzo.material) {
                 
                 // =======================================================
-                // NUEVO: FORZAR LIENZO NEGRO ANTES DE GIRAR
+                // FORZAR LIENZO NEGRO ANTES DE GIRAR
                 // =======================================================
-                lienzo.material.map = null; // Quitamos cualquier textura
-                lienzo.material.color.setHex(0x000000); // Lo ponemos completamente negro
+                lienzo.material.map = null; 
+                lienzo.material.color.setHex(0x000000); 
                 lienzo.material.needsUpdate = true;
 
                 const textureLoader = new THREE.TextureLoader();
@@ -201,7 +201,7 @@ async function inicializarVisor3D() {
                 // ANIMACIÓN ESPECTACULAR DE ENTRADA (Más Rápida)
                 // =======================================================
                 function iniciarEntradaMagica() {
-                    const duracionEntrada = 1800; // 1.8s (Más rápido)
+                    const duracionEntrada = 1800; // 1.8s (Rápido)
                     const inicioEntrada = performance.now();
                     
                     const colorMagia = configNFT.fuerzaBloom > 0 ? new THREE.Color(configNFT.colorMagia) : new THREE.Color(0xffffff);
@@ -220,7 +220,6 @@ async function inicializarVisor3D() {
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             
-                            // Seguro por si no cargó a tiempo durante el giro
                             if (texturas.length > 0 && material.map !== texturas[0]) {
                                 material.color.setHex(0xffffff);
                                 material.map = texturas[0];
@@ -230,23 +229,22 @@ async function inicializarVisor3D() {
                             return; 
                         }
 
-                        // 1. ROTAR MÁS RÁPIDO (8 Vueltas completas en vez de 4)
+                        // ROTAR RÁPIDO (8 Vueltas completas)
                         const easeOut = 1 - Math.pow(1 - t, 3);
                         model.rotation.y = easeOut * (Math.PI * 16); 
 
-                        // 2. BRILLO MAGICO 
+                        // BRILLO MAGICO 
                         const curvaLuz = Math.sin(t * Math.PI); 
                         
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
                         material.emissiveIntensity = curvaLuz * fuerzaEntrada;
 
-                        // 3. REVELAR LA PRIMERA PINTURA EN EL PICO DEL DESTELLO
-                        // Cuando t llega al 50%, el brillo está al máximo. Ahí metemos la imagen.
+                        // REVELAR LA PRIMERA PINTURA EN EL PICO DEL DESTELLO
                         if (t >= 0.5 && texturas.length > 0 && material.map !== texturas[0]) {
-                            material.color.setHex(0xffffff); // Restaurar el color base a blanco
+                            material.color.setHex(0xffffff);
                             material.map = texturas[0];
-                            indiceActual = 0; // Sincronizamos para el bucle posterior
+                            indiceActual = 0; 
                         }
 
                         material.needsUpdate = true;
@@ -298,7 +296,6 @@ async function inicializarVisor3D() {
                     animarResplandor();
                 }
 
-                // Bucle de cambio de pinturas si tiene más de 1 frame
                 if (configNFT.framesCount > 1 && configNFT.cycleInterval > 0) {
                     setInterval(() => {
                         if (texturas.length > 0 && indiceActual !== -1) {
@@ -313,14 +310,17 @@ async function inicializarVisor3D() {
                     }, configNFT.cycleInterval);
                 }
 
-                // Disparador
+                // =======================================================
+                // DISPARADOR INMEDIATO (El secreto de la fluidez)
+                // =======================================================
                 const loaderContainer = document.getElementById('loader-container');
                 if (loaderContainer) {
+                    // Arrancamos el giro AL MISMO TIEMPO que la pantalla se empieza a aclarar
+                    iniciarEntradaMagica(); 
                     loaderContainer.style.opacity = '0';
                     setTimeout(() => {
                         loaderContainer.remove();
-                        iniciarEntradaMagica(); 
-                    }, 400);
+                    }, 400); // Destruimos el DOM del loader cuando ya no se ve
                 } else {
                     iniciarEntradaMagica();
                 }
