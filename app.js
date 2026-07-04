@@ -203,46 +203,45 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: EXPLOSIÓN DE BRILLANTINA HACIA ADELANTE
+            // FUNCIÓN: EXPLOSIÓN SUAVE DE BRILLANTINA (FLOTE MÁGICO)
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 150; // Aumentado un poco por ser más pequeñas
+                const cantidad = 200; // Más densidad, pero movimiento suave
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
 
                 for(let i = 0; i < cantidad; i++) {
-                    // Nacen en cualquier parte de toda la superficie del lienzo
+                    // Nacen en cualquier parte del lienzo
                     const offsetX = (Math.random() - 0.5) * tamanoLienzo.x * 0.95;
                     const offsetY = (Math.random() - 0.5) * tamanoLienzo.y * 0.95;
 
                     posiciones[i * 3] = centroLienzo.x + offsetX; 
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
-                    // Nacen ligeramente por delante de la pintura para no chocar con el 3D
                     posiciones[i * 3 + 2] = centroLienzo.z + 0.02; 
 
                     // =======================================================
-                    // VELOCIDAD: HACIA ADELANTE CON DISPERSIÓN (Forma de cono)
+                    // VELOCIDAD ORGÁNICA: Como polen o polvo en la luz
                     // =======================================================
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.008, // Se abren hacia la izquierda o derecha
-                        y: (Math.random() - 0.5) * 0.008, // Se abren hacia arriba o abajo
-                        z: (Math.random() * 0.012) + 0.002 // Siempre hacia adelante (hacia la cámara)
+                        x: (Math.random() - 0.5) * 0.0015, // Muy lento hacia los lados
+                        y: (Math.random() - 0.2) * 0.0015, // Ligera tendencia a subir (flote)
+                        z: (Math.random() * 0.002) + 0.0005 // Muy lento hacia adelante
                     });
                 }
 
                 geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
 
-                // Multiplicar el color x 3 para que el Bloom las haga brillar
+                // Multiplicar el color x 3 para asegurar el brillo en post-procesamiento
                 const colorMagiaBrillante = new THREE.Color(colorHex).multiplyScalar(3.0);
 
                 const materialParticulas = new THREE.PointsMaterial({
                     color: colorMagiaBrillante,
-                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.0035, // Aún más pequeñas, polvo de estrellas
+                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.0035, 
                     map: texturaParticula, 
                     transparent: true,
                     opacity: 1,
@@ -257,7 +256,8 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.001 + (Math.random() * 0.0015) // Desaparecen lentamente
+                    decaimiento: 0.0015 + (Math.random() * 0.001), // Muerte lenta y suave
+                    semillaAnimacion: Math.random() * 100 // Para el movimiento errático/mágico
                 });
             }
 
@@ -440,6 +440,8 @@ async function inicializarVisor3D() {
         requestAnimationFrame(animate);
         controls.update(); 
         
+        const tiempoMundial = performance.now() * 0.001; // Usado para el tambaleo mágico
+
         for (let i = sistemasDeParticulas.length - 1; i >= 0; i--) {
             const sistema = sistemasDeParticulas[i];
             
@@ -457,9 +459,16 @@ async function inicializarVisor3D() {
             
             const posiciones = sistema.mesh.geometry.attributes.position.array;
             for (let j = 0; j < sistema.velocidades.length; j++) {
+                // Avance natural lento
                 posiciones[j * 3] += sistema.velocidades[j].x;       
                 posiciones[j * 3 + 1] += sistema.velocidades[j].y;   
                 posiciones[j * 3 + 2] += sistema.velocidades[j].z;   
+
+                // =======================================================
+                // DERIVA MÁGICA: Pequeño "tambaleo" en el aire
+                // =======================================================
+                posiciones[j * 3] += Math.sin(tiempoMundial * 1.5 + j + sistema.semillaAnimacion) * 0.0003; 
+                posiciones[j * 3 + 1] += Math.cos(tiempoMundial * 1.2 + j + sistema.semillaAnimacion) * 0.0002;
             }
             sistema.mesh.geometry.attributes.position.needsUpdate = true;
         }
