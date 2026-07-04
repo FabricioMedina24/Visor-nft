@@ -137,7 +137,18 @@ async function inicializarVisor3D() {
     startAutoRotation();
 
     const renderScene = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
+    
+    // =======================================================
+    // NUEVO: BLOOM PASS DINÁMICO
+    // =======================================================
+    const fuerzaBloomGlobal = configNFT.fuerzaBloom > 0 ? (configNFT.fuerzaBloom * 0.25) + 0.5 : 0.8;
+    const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight), 
+        fuerzaBloomGlobal, // Fuerza que escala con la rareza
+        0.6,               // Radio más amplio
+        0.15               // Threshold reducido para atrapar el resplandor
+    );
+    
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
@@ -224,11 +235,10 @@ async function inicializarVisor3D() {
                     posiciones[i * 3 + 2] = centroLienzo.z + 0.01; // Nacen muy pegadas al lienzo
 
                     // VELOCIDAD EXTREMADAMENTE BAJA
-                    // Ahora casi no viajan, se quedan flotando en el mismo sitio
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento lateral
-                        y: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento vertical
-                        z: (Math.random() * 0.0005) + 0.0002 // Apenas se despegan de la pintura
+                        x: (Math.random() - 0.5) * 0.0008, 
+                        y: (Math.random() - 0.5) * 0.0008, 
+                        z: (Math.random() * 0.0005) + 0.0002 
                     });
                 }
 
@@ -253,7 +263,7 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.004 + (Math.random() * 0.003), // Desaparecen relativamente rápido antes de alejarse
+                    decaimiento: 0.004 + (Math.random() * 0.003), 
                     semillaAnimacion: Math.random() * 100 
                 });
             }
@@ -268,6 +278,23 @@ async function inicializarVisor3D() {
             }
             
             if (lienzo && lienzo.material) {
+                
+                // =======================================================
+                // NUEVO: FORZAR MESH STANDARD MATERIAL PARA SOPORTE EMISIVO
+                // =======================================================
+                if (!lienzo.material.isMeshStandardMaterial) {
+                    const materialAnterior = lienzo.material;
+                    lienzo.material = new THREE.MeshStandardMaterial({
+                        map: materialAnterior.map,
+                        color: materialAnterior.color,
+                        roughness: 0.5,
+                        metalness: 0.1
+                    });
+                }
+
+                // Inicializamos las propiedades emisivas limpias
+                lienzo.material.emissive = new THREE.Color(0x000000);
+                lienzo.material.emissiveIntensity = 0;
                 
                 lienzo.material.map = null; 
                 lienzo.material.color.setHex(0x000000); 
