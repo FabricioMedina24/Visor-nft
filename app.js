@@ -203,15 +203,15 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: EXPLOSIÓN SUAVE DE BRILLANTINA (Menos cantidad)
+            // FUNCIÓN: EXPLOSIÓN SUAVE Y CORTA DE BRILLANTINA
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                // REDUCIDO: Ahora son solo 70 partículas para que sea un detalle sutil
-                const cantidad = 70; 
+                // MUCHO MENOS PARTÍCULAS: Detalle muy sutil
+                const cantidad = 35; 
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
@@ -252,7 +252,8 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.0015 + (Math.random() * 0.001),
+                    // DECAIMIENTO MÁS RÁPIDO: Mueren antes y viajan menos distancia
+                    decaimiento: 0.004 + (Math.random() * 0.003), 
                     semillaAnimacion: Math.random() * 100 
                 });
             }
@@ -346,7 +347,7 @@ async function inicializarVisor3D() {
                 }
 
                 // =======================================================
-                // TRANSICIÓN CON TEMBLOR PREVIO
+                // TRANSICIÓN CON TEMBLOR INTENSO
                 // =======================================================
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
@@ -365,7 +366,6 @@ async function inicializarVisor3D() {
                     
                     let particulasGeneradas = false;
 
-                    // GUARDAMOS LA POSICIÓN ORIGINAL PARA RESETEAR EL TEMBLOR
                     const posOriginal = model.position.clone();
 
                     function animarResplandor() {
@@ -373,7 +373,7 @@ async function inicializarVisor3D() {
                         let t = (ahora - inicio) / duracion;
 
                         if (t >= 1) {
-                            model.position.copy(posOriginal); // Aseguramos que termine fijo
+                            model.position.copy(posOriginal); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             return;
@@ -385,11 +385,11 @@ async function inicializarVisor3D() {
                         material.emissiveIntensity = curvaLuz * configNFT.fuerzaBloom;
 
                         // =======================================================
-                        // LÓGICA DE TEMBLOR (SHAKE) ANTES DE CAMBIAR LA IMAGEN
+                        // LÓGICA DE TEMBLOR MÁS INTENSO
                         // =======================================================
                         if (t < 0.5) {
-                            // El temblor se hace más fuerte conforme nos acercamos al cambio (t = 0.5)
-                            const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * 0.012; 
+                            // MULTIPLICADOR AUMENTADO (De 0.012 a 0.03 para sacudida fuerte)
+                            const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * 0.03; 
                             
                             model.position.set(
                                 posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
@@ -397,13 +397,10 @@ async function inicializarVisor3D() {
                                 posOriginal.z + (Math.random() - 0.5) * intensidadTemblor
                             );
                         } else {
-                            // Cuando llega a 0.5, el temblor se detiene en seco (liberación de energía)
+                            // Se queda completamente quieto tras la liberación
                             model.position.copy(posOriginal);
                         }
 
-                        // =======================================================
-                        // REVELAR IMAGEN Y SOLTAR PARTÍCULAS
-                        // =======================================================
                         if (t >= 0.5) {
                             if (material.map !== nuevaTextura) {
                                 material.color.setHex(0xffffff); 
