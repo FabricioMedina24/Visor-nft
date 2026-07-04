@@ -203,7 +203,7 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: EXPLOSIÓN SUAVE CON DISIPACIÓN MULTIDIRECCIONAL
+            // FUNCIÓN: POLVO MÁGICO QUE SE QUEDA CERCA DEL CUADRO
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
@@ -221,14 +221,14 @@ async function inicializarVisor3D() {
 
                     posiciones[i * 3] = centroLienzo.x + offsetX; 
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
-                    posiciones[i * 3 + 2] = centroLienzo.z + 0.02; 
+                    posiciones[i * 3 + 2] = centroLienzo.z + 0.01; // Nacen muy pegadas al lienzo
 
-                    // DISIPACIÓN EN DISTINTAS DIRECCIONES:
-                    // Ahora se expanden aleatoriamente hacia todos lados (arriba, abajo, izquierda, derecha)
+                    // VELOCIDAD EXTREMADAMENTE BAJA
+                    // Ahora casi no viajan, se quedan flotando en el mismo sitio
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.008, // Izquierda / Derecha
-                        y: (Math.random() - 0.5) * 0.008, // Arriba / Abajo
-                        z: (Math.random() * 0.004) + 0.002 // Hacia adelante en distintos grados
+                        x: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento lateral
+                        y: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento vertical
+                        z: (Math.random() * 0.0005) + 0.0002 // Apenas se despegan de la pintura
                     });
                 }
 
@@ -253,7 +253,7 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.004 + (Math.random() * 0.003), // Desaparecen rápido (corta distancia)
+                    decaimiento: 0.004 + (Math.random() * 0.003), // Desaparecen relativamente rápido antes de alejarse
                     semillaAnimacion: Math.random() * 100 
                 });
             }
@@ -347,7 +347,7 @@ async function inicializarVisor3D() {
                 }
 
                 // =======================================================
-                // TRANSICIÓN CON TEMBLOR INTENSO Y DISIPACIÓN
+                // TRANSICIÓN CON TEMBLOR INTENSO Y AURA
                 // =======================================================
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
@@ -478,7 +478,7 @@ async function inicializarVisor3D() {
                 posiciones[j * 3 + 1] += sistema.velocidades[j].y;   
                 posiciones[j * 3 + 2] += sistema.velocidades[j].z;   
 
-                // Leve movimiento mágico orgánico mientras se expanden
+                // Este es el movimiento que las hace titilar (ahora es el movimiento principal, ya que la velocidad es muy baja)
                 posiciones[j * 3] += Math.sin(tiempoMundial * 1.5 + j + sistema.semillaAnimacion) * 0.0003; 
                 posiciones[j * 3 + 1] += Math.cos(tiempoMundial * 1.2 + j + sistema.semillaAnimacion) * 0.0002;
             }
