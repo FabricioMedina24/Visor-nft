@@ -176,6 +176,14 @@ async function inicializarVisor3D() {
             }
             
             if (lienzo && lienzo.material) {
+                
+                // =======================================================
+                // NUEVO: FORZAR LIENZO NEGRO ANTES DE GIRAR
+                // =======================================================
+                lienzo.material.map = null; // Quitamos cualquier textura
+                lienzo.material.color.setHex(0x000000); // Lo ponemos completamente negro
+                lienzo.material.needsUpdate = true;
+
                 const textureLoader = new THREE.TextureLoader();
                 const texturas = [];
                 let indiceActual = -1; 
@@ -190,15 +198,14 @@ async function inicializarVisor3D() {
                 }
 
                 // =======================================================
-                // NUEVO: ANIMACIÓN ESPECTACULAR DE ENTRADA
+                // ANIMACIÓN ESPECTACULAR DE ENTRADA (Más Rápida)
                 // =======================================================
                 function iniciarEntradaMagica() {
-                    const duracionEntrada = 2500; // 2.5 segundos de show
+                    const duracionEntrada = 1800; // 1.8s (Más rápido)
                     const inicioEntrada = performance.now();
                     
-                    // Si es rareza común (fuerza 0), le damos un destello blanco leve sólo para la entrada
                     const colorMagia = configNFT.fuerzaBloom > 0 ? new THREE.Color(configNFT.colorMagia) : new THREE.Color(0xffffff);
-                    const fuerzaEntrada = configNFT.fuerzaBloom > 0 ? configNFT.fuerzaBloom * 1.5 : 2.0;
+                    const fuerzaEntrada = configNFT.fuerzaBloom > 0 ? configNFT.fuerzaBloom * 1.5 : 2.5;
 
                     const material = lienzo.material;
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
@@ -209,31 +216,47 @@ async function inicializarVisor3D() {
                         let t = (ahora - inicioEntrada) / duracionEntrada;
 
                         if (t >= 1) {
-                            model.rotation.y = 0; // Termina exactamente de frente
+                            model.rotation.y = 0; 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
-                            return; // Finaliza la animación de entrada
+                            
+                            // Seguro por si no cargó a tiempo durante el giro
+                            if (texturas.length > 0 && material.map !== texturas[0]) {
+                                material.color.setHex(0xffffff);
+                                material.map = texturas[0];
+                                material.needsUpdate = true;
+                                indiceActual = 0;
+                            }
+                            return; 
                         }
 
-                        // 1. ROTAR RÁPIDO Y FRENAR SUAVE (Ease-Out Cubic)
+                        // 1. ROTAR MÁS RÁPIDO (8 Vueltas completas en vez de 4)
                         const easeOut = 1 - Math.pow(1 - t, 3);
-                        model.rotation.y = easeOut * (Math.PI * 8); // Gira 4 vueltas completas
+                        model.rotation.y = easeOut * (Math.PI * 16); 
 
-                        // 2. BRILLO MAGICO (Curva Senoidal: sube y baja)
-                        const curvaLuz = Math.sin(t * Math.PI); // Empieza en 0, pico en 0.5, baja a 0
+                        // 2. BRILLO MAGICO 
+                        const curvaLuz = Math.sin(t * Math.PI); 
                         
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
                         material.emissiveIntensity = curvaLuz * fuerzaEntrada;
-                        material.needsUpdate = true;
 
+                        // 3. REVELAR LA PRIMERA PINTURA EN EL PICO DEL DESTELLO
+                        // Cuando t llega al 50%, el brillo está al máximo. Ahí metemos la imagen.
+                        if (t >= 0.5 && texturas.length > 0 && material.map !== texturas[0]) {
+                            material.color.setHex(0xffffff); // Restaurar el color base a blanco
+                            material.map = texturas[0];
+                            indiceActual = 0; // Sincronizamos para el bucle posterior
+                        }
+
+                        material.needsUpdate = true;
                         requestAnimationFrame(animarEntrada);
                     }
 
                     animarEntrada();
                 }
 
-                // --- TRANSICIÓN MÁGICA ORIGINAL (Se mantiene igual) ---
+                // --- TRANSICIÓN MÁGICA PARA LOS CAMBIOS POSTERIORES ---
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
                         lienzo.material.map = nuevaTextura;
@@ -275,9 +298,10 @@ async function inicializarVisor3D() {
                     animarResplandor();
                 }
 
+                // Bucle de cambio de pinturas si tiene más de 1 frame
                 if (configNFT.framesCount > 1 && configNFT.cycleInterval > 0) {
                     setInterval(() => {
-                        if (texturas.length > 0) {
+                        if (texturas.length > 0 && indiceActual !== -1) {
                             let nuevoIndice;
                             do {
                                 nuevoIndice = Math.floor(Math.random() * texturas.length);
@@ -289,13 +313,13 @@ async function inicializarVisor3D() {
                     }, configNFT.cycleInterval);
                 }
 
-                // Disparador condicional: Al remover el loader, iniciar giro genial
+                // Disparador
                 const loaderContainer = document.getElementById('loader-container');
                 if (loaderContainer) {
                     loaderContainer.style.opacity = '0';
                     setTimeout(() => {
                         loaderContainer.remove();
-                        iniciarEntradaMagica(); // <-- SE LLAMA A LA ANIMACIÓN DE ENTRADA
+                        iniciarEntradaMagica(); 
                     }, 400);
                 } else {
                     iniciarEntradaMagica();
