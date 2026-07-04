@@ -203,20 +203,20 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: EXPLOSIÓN SUAVE DE BRILLANTINA (FLOTE MÁGICO)
+            // FUNCIÓN: EXPLOSIÓN SUAVE DE BRILLANTINA (Menos cantidad)
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 200; // Más densidad, pero movimiento suave
+                // REDUCIDO: Ahora son solo 70 partículas para que sea un detalle sutil
+                const cantidad = 70; 
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
 
                 for(let i = 0; i < cantidad; i++) {
-                    // Nacen en cualquier parte del lienzo
                     const offsetX = (Math.random() - 0.5) * tamanoLienzo.x * 0.95;
                     const offsetY = (Math.random() - 0.5) * tamanoLienzo.y * 0.95;
 
@@ -224,19 +224,15 @@ async function inicializarVisor3D() {
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
                     posiciones[i * 3 + 2] = centroLienzo.z + 0.02; 
 
-                    // =======================================================
-                    // VELOCIDAD ORGÁNICA: Como polen o polvo en la luz
-                    // =======================================================
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.0015, // Muy lento hacia los lados
-                        y: (Math.random() - 0.2) * 0.0015, // Ligera tendencia a subir (flote)
-                        z: (Math.random() * 0.002) + 0.0005 // Muy lento hacia adelante
+                        x: (Math.random() - 0.5) * 0.0015,
+                        y: (Math.random() - 0.2) * 0.0015,
+                        z: (Math.random() * 0.002) + 0.0005 
                     });
                 }
 
                 geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
 
-                // Multiplicar el color x 3 para asegurar el brillo en post-procesamiento
                 const colorMagiaBrillante = new THREE.Color(colorHex).multiplyScalar(3.0);
 
                 const materialParticulas = new THREE.PointsMaterial({
@@ -256,8 +252,8 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.0015 + (Math.random() * 0.001), // Muerte lenta y suave
-                    semillaAnimacion: Math.random() * 100 // Para el movimiento errático/mágico
+                    decaimiento: 0.0015 + (Math.random() * 0.001),
+                    semillaAnimacion: Math.random() * 100 
                 });
             }
 
@@ -349,6 +345,9 @@ async function inicializarVisor3D() {
                     animarEntrada();
                 }
 
+                // =======================================================
+                // TRANSICIÓN CON TEMBLOR PREVIO
+                // =======================================================
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
                         lienzo.material.map = nuevaTextura;
@@ -366,11 +365,15 @@ async function inicializarVisor3D() {
                     
                     let particulasGeneradas = false;
 
+                    // GUARDAMOS LA POSICIÓN ORIGINAL PARA RESETEAR EL TEMBLOR
+                    const posOriginal = model.position.clone();
+
                     function animarResplandor() {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
                         if (t >= 1) {
+                            model.position.copy(posOriginal); // Aseguramos que termine fijo
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             return;
@@ -381,6 +384,26 @@ async function inicializarVisor3D() {
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
                         material.emissiveIntensity = curvaLuz * configNFT.fuerzaBloom;
 
+                        // =======================================================
+                        // LÓGICA DE TEMBLOR (SHAKE) ANTES DE CAMBIAR LA IMAGEN
+                        // =======================================================
+                        if (t < 0.5) {
+                            // El temblor se hace más fuerte conforme nos acercamos al cambio (t = 0.5)
+                            const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * 0.012; 
+                            
+                            model.position.set(
+                                posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
+                                posOriginal.y + (Math.random() - 0.5) * intensidadTemblor,
+                                posOriginal.z + (Math.random() - 0.5) * intensidadTemblor
+                            );
+                        } else {
+                            // Cuando llega a 0.5, el temblor se detiene en seco (liberación de energía)
+                            model.position.copy(posOriginal);
+                        }
+
+                        // =======================================================
+                        // REVELAR IMAGEN Y SOLTAR PARTÍCULAS
+                        // =======================================================
                         if (t >= 0.5) {
                             if (material.map !== nuevaTextura) {
                                 material.color.setHex(0xffffff); 
@@ -440,7 +463,7 @@ async function inicializarVisor3D() {
         requestAnimationFrame(animate);
         controls.update(); 
         
-        const tiempoMundial = performance.now() * 0.001; // Usado para el tambaleo mágico
+        const tiempoMundial = performance.now() * 0.001; 
 
         for (let i = sistemasDeParticulas.length - 1; i >= 0; i--) {
             const sistema = sistemasDeParticulas[i];
@@ -459,14 +482,10 @@ async function inicializarVisor3D() {
             
             const posiciones = sistema.mesh.geometry.attributes.position.array;
             for (let j = 0; j < sistema.velocidades.length; j++) {
-                // Avance natural lento
                 posiciones[j * 3] += sistema.velocidades[j].x;       
                 posiciones[j * 3 + 1] += sistema.velocidades[j].y;   
                 posiciones[j * 3 + 2] += sistema.velocidades[j].z;   
 
-                // =======================================================
-                // DERIVA MÁGICA: Pequeño "tambaleo" en el aire
-                // =======================================================
                 posiciones[j * 3] += Math.sin(tiempoMundial * 1.5 + j + sistema.semillaAnimacion) * 0.0003; 
                 posiciones[j * 3 + 1] += Math.cos(tiempoMundial * 1.2 + j + sistema.semillaAnimacion) * 0.0002;
             }
