@@ -41,18 +41,14 @@ async function obtenerConfiguracionNFT(modelId) {
         if (!respuesta.ok) throw new Error(`No se encontró el archivo: ${urlMetadatos}`);
         
         const metadata = await respuesta.json();
-        
-        // CORRECCIÓN: Detectar Rarity o rarity (mayúscula o minúscula) o dentro de atributos si es un NFT estándar
-        let rarezaExtraida = metadata.rarity || metadata.Rarity || 'common';
-        const rarezaLimpia = rarezaExtraida.toLowerCase();
-        
+        const rarezaLimpia = metadata.rarity ? metadata.rarity.toLowerCase() : 'common';
         const estilosRareza = CONFIGURACION_RAREZAS[rarezaLimpia] || CONFIGURACION_RAREZAS['common'];
 
         return {
             ...CONFIG_POR_DEFECTO,
             rarity: rarezaLimpia,
-            framesCount: metadata.frames_count || metadata.Frames_count || CONFIG_POR_DEFECTO.framesCount,
-            cycleInterval: metadata.cycle_interval || metadata.Cycle_interval || CONFIG_POR_DEFECTO.cycleInterval,
+            framesCount: metadata.frames_count !== undefined ? metadata.frames_count : CONFIG_POR_DEFECTO.framesCount,
+            cycleInterval: metadata.cycle_interval !== undefined ? metadata.cycle_interval : CONFIG_POR_DEFECTO.cycleInterval,
             ...estilosRareza 
         };
 
@@ -140,13 +136,8 @@ async function inicializarVisor3D() {
     controls.addEventListener('end', resetInactivityTimer);
     startAutoRotation();
 
-    // =======================================================
-    // CORRECCIÓN: CANAL DE BLOOM (Resplandor más sensible)
-    // =======================================================
     const renderScene = new RenderPass(scene, camera);
-    // Parámetros: Resolution, Strength, Radius, Threshold
-    // Bajé el threshold a 0.1 y subí la fuerza para que el magenta se vea espectacular
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.0, 0.5, 0.1);
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
@@ -212,14 +203,14 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: POLVO MÁGICO
+            // FUNCIÓN: POLVO MÁGICO QUE SE QUEDA CERCA DEL CUADRO
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 35; 
+                const cantidad = 35; // Se mantienen pocas partículas
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
@@ -230,19 +221,20 @@ async function inicializarVisor3D() {
 
                     posiciones[i * 3] = centroLienzo.x + offsetX; 
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
-                    posiciones[i * 3 + 2] = centroLienzo.z + 0.01; 
+                    posiciones[i * 3 + 2] = centroLienzo.z + 0.01; // Nacen muy pegadas al lienzo
 
+                    // VELOCIDAD EXTREMADAMENTE BAJA
+                    // Ahora casi no viajan, se quedan flotando en el mismo sitio
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.0008, 
-                        y: (Math.random() - 0.5) * 0.0008, 
-                        z: (Math.random() * 0.0005) + 0.0002 
+                        x: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento lateral
+                        y: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento vertical
+                        z: (Math.random() * 0.0005) + 0.0002 // Apenas se despegan de la pintura
                     });
                 }
 
                 geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
 
-                // Aumentamos el multiplicador para que incluso los colores oscuros destellen
-                const colorMagiaBrillante = new THREE.Color(colorHex).multiplyScalar(5.0);
+                const colorMagiaBrillante = new THREE.Color(colorHex).multiplyScalar(3.0);
 
                 const materialParticulas = new THREE.PointsMaterial({
                     color: colorMagiaBrillante,
@@ -261,7 +253,7 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.004 + (Math.random() * 0.003), 
+                    decaimiento: 0.004 + (Math.random() * 0.003), // Desaparecen relativamente rápido antes de alejarse
                     semillaAnimacion: Math.random() * 100 
                 });
             }
@@ -354,6 +346,9 @@ async function inicializarVisor3D() {
                     animarEntrada();
                 }
 
+                // =======================================================
+                // TRANSICIÓN CON TEMBLOR INTENSO Y AURA
+                // =======================================================
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
                         lienzo.material.map = nuevaTextura;
@@ -483,6 +478,7 @@ async function inicializarVisor3D() {
                 posiciones[j * 3 + 1] += sistema.velocidades[j].y;   
                 posiciones[j * 3 + 2] += sistema.velocidades[j].z;   
 
+                // Este es el movimiento que las hace titilar (ahora es el movimiento principal, ya que la velocidad es muy baja)
                 posiciones[j * 3] += Math.sin(tiempoMundial * 1.5 + j + sistema.semillaAnimacion) * 0.0003; 
                 posiciones[j * 3 + 1] += Math.cos(tiempoMundial * 1.2 + j + sistema.semillaAnimacion) * 0.0002;
             }
