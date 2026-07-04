@@ -210,7 +210,7 @@ async function inicializarVisor3D() {
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 120; // Un poco más de brillantina para rellenar los bordes
+                const cantidad = 120; // Cantidad de brillantina
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
@@ -242,22 +242,26 @@ async function inicializarVisor3D() {
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
                     posiciones[i * 3 + 2] = centroLienzo.z + (Math.random() * 0.05) + 0.01; 
 
-                    // Se expanden suavemente hacia afuera y hacia arriba
+                    // =======================================================
+                    // NUEVO: SE EXPANDEN EN TODAS LAS DIRECCIONES ALEATORIAMENTE
+                    // =======================================================
+                    // Multiplicar por un factor aleatorio entre negativo y positivo
+                    // Esto permite que vayan arriba, abajo, izquierda, derecha, adelante o atrás.
                     velocidades.push({
-                        x: (offsetX > 0 ? 1 : -1) * (Math.random() * 0.0015) + (Math.random() - 0.5) * 0.001,
-                        y: (Math.random() * 0.002) + 0.0005, // Flotan lento hacia arriba
-                        z: (Math.random() * 0.002) - 0.001
+                        x: (Math.random() - 0.5) * 0.008, 
+                        y: (Math.random() - 0.5) * 0.008, 
+                        z: (Math.random() - 0.5) * 0.008  
                     });
                 }
 
                 geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
 
-                // Truco de magia: Multiplicar el color x 3 para que el Bloom las haga brillar al máximo
+                // Multiplicar el color x 3 para que el Bloom las haga brillar al máximo
                 const colorMagiaBrillante = new THREE.Color(colorHex).multiplyScalar(3.0);
 
                 const materialParticulas = new THREE.PointsMaterial({
                     color: colorMagiaBrillante,
-                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.006, // Más pequeñas (Brillantina)
+                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.006, // Tamaño de brillantina
                     map: texturaParticula, 
                     transparent: true,
                     opacity: 1,
