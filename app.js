@@ -59,7 +59,7 @@ async function obtenerConfiguracionNFT(modelId) {
 }
 
 // =======================================================
-// NUEVO: CREAR TEXTURA REDONDA PARA LAS PARTÍCULAS
+// CREAR TEXTURA REDONDA PARA LAS PARTÍCULAS
 // =======================================================
 function crearTexturaCirculo() {
     const canvas = document.createElement('canvas');
@@ -67,10 +67,9 @@ function crearTexturaCirculo() {
     canvas.height = 64;
     const context = canvas.getContext('2d');
     
-    // Dibujar un círculo blanco con bordes difuminados suaves
     const gradiente = context.createRadialGradient(32, 32, 0, 32, 32, 32);
     gradiente.addColorStop(0, 'rgba(255,255,255,1)');
-    gradiente.addColorStop(0.4, 'rgba(255,255,255,0.8)');
+    gradiente.addColorStop(0.3, 'rgba(255,255,255,0.9)');
     gradiente.addColorStop(1, 'rgba(255,255,255,0)');
     
     context.fillStyle = gradiente;
@@ -86,7 +85,6 @@ async function inicializarVisor3D() {
     let modelId = urlParams.get('id') || '1';
 
     const configNFT = await obtenerConfiguracionNFT(modelId);
-
     const modelPath = `models/nft${modelId}.glb`;
     const sistemasDeParticulas = [];
 
@@ -205,41 +203,62 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: CREAR PARTÍCULAS DESDE EL LIENZO
+            // FUNCIÓN: CREAR BRILLANTINA EN EL CONTORNO
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
-                // Obtener las dimensiones exactas únicamente del LIENZO
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 100; // Un poco más de polvo mágico
+                const cantidad = 120; // Un poco más de brillantina para rellenar los bordes
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
 
                 for(let i = 0; i < cantidad; i++) {
-                    // Nacen aleatoriamente esparcidas a lo ancho y alto del propio lienzo
-                    posiciones[i * 3] = centroLienzo.x + (Math.random() - 0.5) * tamanoLienzo.x * 0.9; 
-                    posiciones[i * 3 + 1] = centroLienzo.y + (Math.random() - 0.5) * tamanoLienzo.y * 0.9;
-                    
-                    // Nacen ligeramente adelante de la pintura
+                    const borde = Math.random();
+                    let offsetX = 0, offsetY = 0;
+
+                    // Distribuir a lo largo de los 4 contornos del cuadro
+                    if (borde < 0.25) { // Arriba
+                        offsetX = (Math.random() - 0.5) * tamanoLienzo.x;
+                        offsetY = tamanoLienzo.y * 0.5;
+                    } else if (borde < 0.5) { // Abajo
+                        offsetX = (Math.random() - 0.5) * tamanoLienzo.x;
+                        offsetY = -tamanoLienzo.y * 0.5;
+                    } else if (borde < 0.75) { // Izquierda
+                        offsetX = -tamanoLienzo.x * 0.5;
+                        offsetY = (Math.random() - 0.5) * tamanoLienzo.y;
+                    } else { // Derecha
+                        offsetX = tamanoLienzo.x * 0.5;
+                        offsetY = (Math.random() - 0.5) * tamanoLienzo.y;
+                    }
+
+                    // Pequeña variación de ruido para que no sea una línea rígida
+                    offsetX += (Math.random() - 0.5) * (tamanoLienzo.x * 0.1);
+                    offsetY += (Math.random() - 0.5) * (tamanoLienzo.y * 0.1);
+
+                    posiciones[i * 3] = centroLienzo.x + offsetX; 
+                    posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
                     posiciones[i * 3 + 2] = centroLienzo.z + (Math.random() * 0.05) + 0.01; 
 
-                    // Flotan hacia adelante y hacia arriba
+                    // Se expanden suavemente hacia afuera y hacia arriba
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.003,
-                        y: (Math.random() * 0.006) + 0.002, // Hacia arriba
-                        z: (Math.random() * 0.008) + 0.002  // Hacia la cámara
+                        x: (offsetX > 0 ? 1 : -1) * (Math.random() * 0.0015) + (Math.random() - 0.5) * 0.001,
+                        y: (Math.random() * 0.002) + 0.0005, // Flotan lento hacia arriba
+                        z: (Math.random() * 0.002) - 0.001
                     });
                 }
 
                 geometria.setAttribute('position', new THREE.BufferAttribute(posiciones, 3));
 
+                // Truco de magia: Multiplicar el color x 3 para que el Bloom las haga brillar al máximo
+                const colorMagiaBrillante = new THREE.Color(colorHex).multiplyScalar(3.0);
+
                 const materialParticulas = new THREE.PointsMaterial({
-                    color: colorHex,
-                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.02, // Muy pequeñitas y proporcionales
-                    map: texturaParticula, // ASIGNAMOS LA TEXTURA REDONDA
+                    color: colorMagiaBrillante,
+                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.006, // Más pequeñas (Brillantina)
+                    map: texturaParticula, 
                     transparent: true,
                     opacity: 1,
                     blending: THREE.AdditiveBlending,
@@ -247,16 +266,14 @@ async function inicializarVisor3D() {
                 });
 
                 const mallaParticulas = new THREE.Points(geometria, materialParticulas);
-                
-                // Agregamos las partículas al modelo en lugar de la escena, 
-                // así si el modelo está rotando, el polvo nace girando con él.
                 model.add(mallaParticulas);
 
                 sistemasDeParticulas.push({
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.005 + (Math.random() * 0.003) // Se desvanecen suavemente
+                    // Decaimiento mucho más lento (duran mucho más flotando)
+                    decaimiento: 0.001 + (Math.random() * 0.0015) 
                 });
             }
 
@@ -335,7 +352,6 @@ async function inicializarVisor3D() {
                                 indiceActual = 0; 
                             }
 
-                            // Disparar las partículas pasándole el "lienzo" en lugar del centro general
                             if (!particulasGeneradas) {
                                 crearParticulas(colorMagia, lienzo);
                                 particulasGeneradas = true;
@@ -446,7 +462,6 @@ async function inicializarVisor3D() {
             sistema.vida -= sistema.decaimiento;
             
             if (sistema.vida <= 0) {
-                // Ahora como están atachadas al modelo, las removemos del modelo
                 sistema.mesh.parent.remove(sistema.mesh);
                 sistema.mesh.geometry.dispose();
                 sistema.mesh.material.dispose();
@@ -454,7 +469,8 @@ async function inicializarVisor3D() {
                 continue;
             }
 
-            sistema.mesh.material.opacity = Math.max(0, sistema.vida);
+            // Usamos un ligero "ease-out" para la opacidad, así brilla más tiempo antes de apagar del todo
+            sistema.mesh.material.opacity = Math.pow(Math.max(0, sistema.vida), 0.5);
             
             const posiciones = sistema.mesh.geometry.attributes.position.array;
             for (let j = 0; j < sistema.velocidades.length; j++) {
