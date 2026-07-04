@@ -58,21 +58,38 @@ async function obtenerConfiguracionNFT(modelId) {
     }
 }
 
+// =======================================================
+// NUEVO: CREAR TEXTURA REDONDA PARA LAS PARTÍCULAS
+// =======================================================
+function crearTexturaCirculo() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d');
+    
+    // Dibujar un círculo blanco con bordes difuminados suaves
+    const gradiente = context.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradiente.addColorStop(0, 'rgba(255,255,255,1)');
+    gradiente.addColorStop(0.4, 'rgba(255,255,255,0.8)');
+    gradiente.addColorStop(1, 'rgba(255,255,255,0)');
+    
+    context.fillStyle = gradiente;
+    context.fillRect(0, 0, 64, 64);
+    
+    return new THREE.CanvasTexture(canvas);
+}
+
+const texturaParticula = crearTexturaCirculo();
+
 async function inicializarVisor3D() {
     const urlParams = new URLSearchParams(window.location.search);
     let modelId = urlParams.get('id') || '1';
 
     const configNFT = await obtenerConfiguracionNFT(modelId);
-    console.log("Configuración aplicada al renderizador:", configNFT);
 
     const modelPath = `models/nft${modelId}.glb`;
-
-    // ARREGLO PARA GESTIONAR LAS PARTICULAS ACTIVAS
     const sistemasDeParticulas = [];
 
-    // ==========================================
-    // CONFIGURACIÓN DEL RENDERIZADOR NATIVO
-    // ==========================================
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(configNFT.colorFondo); 
 
@@ -121,9 +138,6 @@ async function inicializarVisor3D() {
     controls.addEventListener('end', resetInactivityTimer);
     startAutoRotation();
 
-    // ==========================================
-    // CANAL DE POST-PROCESAMIENTO (BLOOM)
-    // ==========================================
     const renderScene = new RenderPass(scene, camera);
     const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
     const outputPass = new OutputPass();
@@ -133,7 +147,6 @@ async function inicializarVisor3D() {
     composer.addPass(bloomPass); 
     composer.addPass(outputPass);
 
-    // ENTORNO HDRI
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
 
@@ -160,7 +173,6 @@ async function inicializarVisor3D() {
     camera.add(cameraLight);
     scene.add(camera); 
 
-    // CARGA DEL MODELO 3D
     const loader = new GLTFLoader();
     loader.setCrossOrigin('anonymous');
 
@@ -169,7 +181,6 @@ async function inicializarVisor3D() {
         function (gltf) {
             const model = gltf.scene;
 
-            // Arreglar colores del modelo
             model.traverse((child) => {
                 if (child.isMesh) {
                     const mat = child.material;
@@ -181,13 +192,11 @@ async function inicializarVisor3D() {
 
             scene.add(model);
 
-            // Calcular el centro y el tamaño del modelo PRIMERO
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z);
             
-            // Ajustar cámara y controles
             controls.target.copy(center);
             controls.minDistance = maxDim * 0.45; 
             controls.maxDistance = maxDim * 4.0; 
@@ -196,25 +205,32 @@ async function inicializarVisor3D() {
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: CREAR PARTÍCULAS MÁGICAS ATMOSFÉRICAS
+            // FUNCIÓN: CREAR PARTÍCULAS DESDE EL LIENZO
             // =======================================================
-            function crearParticulas(colorHex, centro, maxDim) {
-                const cantidad = 80;
+            function crearParticulas(colorHex, mallaLienzo) {
+                // Obtener las dimensiones exactas únicamente del LIENZO
+                const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
+                const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
+                const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
+
+                const cantidad = 100; // Un poco más de polvo mágico
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
 
                 for(let i = 0; i < cantidad; i++) {
-                    // Posición inicial (dispersas alrededor del centro del modelo)
-                    posiciones[i * 3] = centro.x + (Math.random() - 0.5) * (maxDim * 1.5); // X
-                    posiciones[i * 3 + 1] = centro.y + (Math.random() - 0.5) * (maxDim * 1.5); // Y
-                    posiciones[i * 3 + 2] = centro.z + (Math.random() - 0.5) * (maxDim * 0.5) + (maxDim * 0.2); // Z (ligeramente al frente)
+                    // Nacen aleatoriamente esparcidas a lo ancho y alto del propio lienzo
+                    posiciones[i * 3] = centroLienzo.x + (Math.random() - 0.5) * tamanoLienzo.x * 0.9; 
+                    posiciones[i * 3 + 1] = centroLienzo.y + (Math.random() - 0.5) * tamanoLienzo.y * 0.9;
+                    
+                    // Nacen ligeramente adelante de la pintura
+                    posiciones[i * 3 + 2] = centroLienzo.z + (Math.random() * 0.05) + 0.01; 
 
-                    // Velocidad de deriva (flotando como polvo al sol)
+                    // Flotan hacia adelante y hacia arriba
                     velocidades.push({
-                        x: (Math.random() - 0.5) * (maxDim * 0.005),
-                        y: (Math.random() * (maxDim * 0.005)) + (maxDim * 0.002), // Siempre tienden a subir suavemente
-                        z: (Math.random() - 0.5) * (maxDim * 0.005)
+                        x: (Math.random() - 0.5) * 0.003,
+                        y: (Math.random() * 0.006) + 0.002, // Hacia arriba
+                        z: (Math.random() * 0.008) + 0.002  // Hacia la cámara
                     });
                 }
 
@@ -222,28 +238,28 @@ async function inicializarVisor3D() {
 
                 const materialParticulas = new THREE.PointsMaterial({
                     color: colorHex,
-                    size: maxDim * 0.015, // Tamaño proporcional al modelo
+                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.02, // Muy pequeñitas y proporcionales
+                    map: texturaParticula, // ASIGNAMOS LA TEXTURA REDONDA
                     transparent: true,
                     opacity: 1,
-                    blending: THREE.AdditiveBlending, // Da el efecto brillante de luz
+                    blending: THREE.AdditiveBlending,
                     depthWrite: false
                 });
 
                 const mallaParticulas = new THREE.Points(geometria, materialParticulas);
-                scene.add(mallaParticulas);
+                
+                // Agregamos las partículas al modelo en lugar de la escena, 
+                // así si el modelo está rotando, el polvo nace girando con él.
+                model.add(mallaParticulas);
 
-                // Guardar en el arreglo global para animarlas en el bucle
                 sistemasDeParticulas.push({
                     mesh: mallaParticulas,
                     velocidades: velocidades,
-                    vida: 1.0,           // Vida inicia en 1 (100% opaco)
-                    decaimiento: 0.003 + (Math.random() * 0.002) // Qué tan rápido se desvanecen
+                    vida: 1.0,           
+                    decaimiento: 0.005 + (Math.random() * 0.003) // Se desvanecen suavemente
                 });
             }
 
-            // =======================================================
-            // GESTIÓN DEL LIENZO
-            // =======================================================
             const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
 
@@ -255,7 +271,6 @@ async function inicializarVisor3D() {
             
             if (lienzo && lienzo.material) {
                 
-                // Forzar lienzo negro antes de girar
                 lienzo.material.map = null; 
                 lienzo.material.color.setHex(0x000000); 
                 lienzo.material.needsUpdate = true;
@@ -273,9 +288,6 @@ async function inicializarVisor3D() {
                     texturas.push(texturaCarga);
                 }
 
-                // =======================================================
-                // ANIMACIÓN ESPECTACULAR DE ENTRADA CON PARTÍCULAS
-                // =======================================================
                 function iniciarEntradaMagica() {
                     const duracionEntrada = 1800; 
                     const inicioEntrada = performance.now();
@@ -307,18 +319,15 @@ async function inicializarVisor3D() {
                             return; 
                         }
 
-                        // ROTAR RÁPIDO
                         const easeOut = 1 - Math.pow(1 - t, 3);
                         model.rotation.y = easeOut * (Math.PI * 16); 
 
-                        // BRILLO MAGICO 
                         const curvaLuz = Math.sin(t * Math.PI); 
                         
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
                         material.emissiveIntensity = curvaLuz * fuerzaEntrada;
 
-                        // EN EL PICO DEL BRILLO (T=0.5): MOSTRAR PINTURA Y LANZAR PARTÍCULAS
                         if (t >= 0.5) {
                             if (texturas.length > 0 && material.map !== texturas[0]) {
                                 material.color.setHex(0xffffff);
@@ -326,9 +335,9 @@ async function inicializarVisor3D() {
                                 indiceActual = 0; 
                             }
 
-                            // Disparar las partículas una sola vez
+                            // Disparar las partículas pasándole el "lienzo" en lugar del centro general
                             if (!particulasGeneradas) {
-                                crearParticulas(colorMagia, center, maxDim);
+                                crearParticulas(colorMagia, lienzo);
                                 particulasGeneradas = true;
                             }
                         }
@@ -340,9 +349,6 @@ async function inicializarVisor3D() {
                     animarEntrada();
                 }
 
-                // =======================================================
-                // TRANSICIÓN MÁGICA CON PARTÍCULAS (PARA CICLOS POSTERIORES)
-                // =======================================================
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
                         lienzo.material.map = nuevaTextura;
@@ -382,9 +388,8 @@ async function inicializarVisor3D() {
                                 material.needsUpdate = true;
                             }
 
-                            // Partículas en cada cambio de pintura (Opcional, hace el ciclo más bello)
                             if (!particulasGeneradas) {
-                                crearParticulas(colorMagia, center, maxDim);
+                                crearParticulas(colorMagia, lienzo);
                                 particulasGeneradas = true;
                             }
                         }
@@ -394,7 +399,6 @@ async function inicializarVisor3D() {
                     animarResplandor();
                 }
 
-                // Bucle de cambios automáticos
                 if (configNFT.framesCount > 1 && configNFT.cycleInterval > 0) {
                     setInterval(() => {
                         if (texturas.length > 0 && indiceActual !== -1) {
@@ -409,7 +413,6 @@ async function inicializarVisor3D() {
                     }, configNFT.cycleInterval);
                 }
 
-                // DISPARADOR INMEDIATO
                 const loaderContainer = document.getElementById('loader-container');
                 if (loaderContainer) {
                     iniciarEntradaMagica(); 
@@ -437,35 +440,30 @@ async function inicializarVisor3D() {
         requestAnimationFrame(animate);
         controls.update(); 
         
-        // --- ACTUALIZAR SISTEMA DE PARTÍCULAS ---
         for (let i = sistemasDeParticulas.length - 1; i >= 0; i--) {
             const sistema = sistemasDeParticulas[i];
             
-            // Restar vida (desvanecer)
             sistema.vida -= sistema.decaimiento;
             
-            // Si la vida llega a 0, limpiar y borrar el sistema
             if (sistema.vida <= 0) {
-                scene.remove(sistema.mesh);
+                // Ahora como están atachadas al modelo, las removemos del modelo
+                sistema.mesh.parent.remove(sistema.mesh);
                 sistema.mesh.geometry.dispose();
                 sistema.mesh.material.dispose();
                 sistemasDeParticulas.splice(i, 1);
                 continue;
             }
 
-            // Actualizar opacidad
             sistema.mesh.material.opacity = Math.max(0, sistema.vida);
             
-            // Actualizar posición flotante (polvo atmosférico)
             const posiciones = sistema.mesh.geometry.attributes.position.array;
             for (let j = 0; j < sistema.velocidades.length; j++) {
-                posiciones[j * 3] += sistema.velocidades[j].x;       // X
-                posiciones[j * 3 + 1] += sistema.velocidades[j].y;   // Y (flotar arriba)
-                posiciones[j * 3 + 2] += sistema.velocidades[j].z;   // Z
+                posiciones[j * 3] += sistema.velocidades[j].x;       
+                posiciones[j * 3 + 1] += sistema.velocidades[j].y;   
+                posiciones[j * 3 + 2] += sistema.velocidades[j].z;   
             }
             sistema.mesh.geometry.attributes.position.needsUpdate = true;
         }
-        // ----------------------------------------
 
         if (composer) {
             composer.render();
