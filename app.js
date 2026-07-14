@@ -23,7 +23,8 @@ const CONFIG_POR_DEFECTO = {
     cycleInterval: 0,       
     colorMagia: 0x000000,   
     fuerzaBloom: 0.0,       
-    colorFondo: 0x0b0b0b    
+    colorFondo: 0x0b0b0b,
+    backgroundImage: null 
 };
 
 const CONFIGURACION_RAREZAS = {
@@ -49,12 +50,19 @@ async function obtenerConfiguracionNFT(modelId) {
             rarity: rarezaLimpia,
             framesCount: metadata.frames_count !== undefined ? metadata.frames_count : CONFIG_POR_DEFECTO.framesCount,
             cycleInterval: metadata.cycle_interval !== undefined ? metadata.cycle_interval : CONFIG_POR_DEFECTO.cycleInterval,
+            
+            // CONFIGURADO PARA PNG: Lee el PNG del JSON, o busca bg_ID.png por defecto si no existe
+            backgroundImage: metadata.background_image || `environments/bg_${modelId}.png`, 
+            
             ...estilosRareza 
         };
 
     } catch (error) {
         console.warn(`Aviso: Usando configuración estática por defecto debido a: ${error.message}`);
-        return CONFIG_POR_DEFECTO; 
+        return {
+            ...CONFIG_POR_DEFECTO,
+            backgroundImage: `environments/bg_${modelId}.png` // Respaldo automático en formato PNG
+        }; 
     }
 }
 
@@ -89,7 +97,27 @@ async function inicializarVisor3D() {
     const sistemasDeParticulas = [];
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(configNFT.colorFondo); 
+
+    // =======================================================
+    // CARGA DE FONDO (IMAGEN PNG O COLOR DE RESPALDO)
+    // =======================================================
+    if (configNFT.backgroundImage) {
+        const bgLoader = new THREE.TextureLoader();
+        bgLoader.load(
+            configNFT.backgroundImage,
+            function (texture) {
+                texture.colorSpace = THREE.SRGBColorSpace;
+                scene.background = texture;
+            },
+            undefined,
+            function (err) {
+                console.warn(`No se pudo cargar la imagen PNG: ${configNFT.backgroundImage}. Usando color de respaldo.`);
+                scene.background = new THREE.Color(configNFT.colorFondo); 
+            }
+        );
+    } else {
+        scene.background = new THREE.Color(configNFT.colorFondo); 
+    }
 
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -210,7 +238,7 @@ async function inicializarVisor3D() {
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 35; // Se mantienen pocas partículas
+                const cantidad = 35; 
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
@@ -221,14 +249,12 @@ async function inicializarVisor3D() {
 
                     posiciones[i * 3] = centroLienzo.x + offsetX; 
                     posiciones[i * 3 + 1] = centroLienzo.y + offsetY;
-                    posiciones[i * 3 + 2] = centroLienzo.z + 0.01; // Nacen muy pegadas al lienzo
+                    posiciones[i * 3 + 2] = centroLienzo.z + 0.01; 
 
-                    // VELOCIDAD EXTREMADAMENTE BAJA
-                    // Ahora casi no viajan, se quedan flotando en el mismo sitio
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento lateral
-                        y: (Math.random() - 0.5) * 0.0008, // Casi sin movimiento vertical
-                        z: (Math.random() * 0.0005) + 0.0002 // Apenas se despegan de la pintura
+                        x: (Math.random() - 0.5) * 0.0008, 
+                        y: (Math.random() - 0.5) * 0.0008, 
+                        z: (Math.random() * 0.0005) + 0.0002 
                     });
                 }
 
@@ -253,7 +279,7 @@ async function inicializarVisor3D() {
                     mesh: mallaParticulas,
                     velocidades: velocidades,
                     vida: 1.0,           
-                    decaimiento: 0.004 + (Math.random() * 0.003), // Desaparecen relativamente rápido antes de alejarse
+                    decaimiento: 0.004 + (Math.random() * 0.003), 
                     semillaAnimacion: Math.random() * 100 
                 });
             }
@@ -346,9 +372,6 @@ async function inicializarVisor3D() {
                     animarEntrada();
                 }
 
-                // =======================================================
-                // TRANSICIÓN CON TEMBLOR INTENSO Y AURA
-                // =======================================================
                 function hacerTransicionMagica(nuevaTextura) {
                     if (configNFT.fuerzaBloom <= 0) {
                         lienzo.material.map = nuevaTextura;
@@ -478,7 +501,6 @@ async function inicializarVisor3D() {
                 posiciones[j * 3 + 1] += sistema.velocidades[j].y;   
                 posiciones[j * 3 + 2] += sistema.velocidades[j].z;   
 
-                // Este es el movimiento que las hace titilar (ahora es el movimiento principal, ya que la velocidad es muy baja)
                 posiciones[j * 3] += Math.sin(tiempoMundial * 1.5 + j + sistema.semillaAnimacion) * 0.0003; 
                 posiciones[j * 3 + 1] += Math.cos(tiempoMundial * 1.2 + j + sistema.semillaAnimacion) * 0.0002;
             }

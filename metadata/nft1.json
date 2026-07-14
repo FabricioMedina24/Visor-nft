@@ -2,5 +2,6 @@
   "id": "1",
   "rarity": "Legendary",
   "frames_count": 5,
-  "cycle_interval": 30000
+  "cycle_interval": 30000,
+  "background_image": "environments/bg_1.png"
 }
