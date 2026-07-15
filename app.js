@@ -61,7 +61,7 @@ async function obtenerConfiguracionNFT(modelId) {
         console.warn(`Aviso: Usando configuración estática por defecto debido a: ${error.message}`);
         return {
             ...CONFIG_POR_DEFECTO,
-            backgroundImage: `environments/bg_${modelId}.png` // Respaldo automático en formato PNG
+            backgroundImage: `environments/bg_${modelId}.png` 
         }; 
     }
 }
@@ -165,7 +165,14 @@ async function inicializarVisor3D() {
     startAutoRotation();
 
     const renderScene = new RenderPass(scene, camera);
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.25, 0.4, 0.5);
+    
+    // =======================================================
+    // CONFIGURACIÓN DE BLOOM AJUSTADA (SOLUCIÓN AL FONDO BRILLANTE)
+    // =======================================================
+    // Se ha subido el umbral (Threshold) a 1.0 para que ignore por completo el color de fondo PNG.
+    // Se ha subido la fuerza a 0.35 para compensar la pérdida de brillo en los tonos intermedios.
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.4, 1.0);
+    
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
