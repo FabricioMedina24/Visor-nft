@@ -65,6 +65,14 @@ const CONFIG_POR_DEFECTO = {
     transitionDuration: 1500,
     introSpinSpeed: 16,
 
+    // Transición Mágica (¡NUEVO!)
+    magicTransitionEnabled: true,
+    magicTransitionIntensity: 8.0,
+    magicTransitionBloomStrength: 8.0,
+    magicTransitionDuration: 1500,
+    magicTransitionShake: 0.03,
+    magicTransitionParticleBurst: 100,
+
     // Cámara
     cameraFov: 75,
     cameraDistanceFactor: 0.9,
@@ -132,6 +140,14 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             emissiveColor: colorBaseMagia,
             transitionDuration: metadata.canvas?.transition_duration ?? CONFIG_POR_DEFECTO.transitionDuration,
             introSpinSpeed: metadata.canvas?.intro_spin_speed ?? CONFIG_POR_DEFECTO.introSpinSpeed,
+
+            // Transición Mágica (¡NUEVO!)
+            magicTransitionEnabled: metadata.magic_transition?.enabled ?? CONFIG_POR_DEFECTO.magicTransitionEnabled,
+            magicTransitionIntensity: metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionIntensity,
+            magicTransitionBloomStrength: metadata.magic_transition?.bloom_strength ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength,
+            magicTransitionDuration: metadata.magic_transition?.duration ?? CONFIG_POR_DEFECTO.magicTransitionDuration,
+            magicTransitionShake: metadata.magic_transition?.shake ?? CONFIG_POR_DEFECTO.magicTransitionShake,
+            magicTransitionParticleBurst: metadata.magic_transition?.particle_burst ?? CONFIG_POR_DEFECTO.magicTransitionParticleBurst,
 
             // Cámara
             cameraFov: metadata.camera?.fov ?? CONFIG_POR_DEFECTO.cameraFov,
@@ -330,14 +346,16 @@ async function inicializarVisorColeccion(coleccion, id) {
             // =======================================================
             // FUNCIÓN: POLVO MÁGICO / PARTÍCULAS
             // =======================================================
-            function crearParticulas(colorHex, mallaLienzo) {
-                if (!configNFT.particlesEnabled) return;
+            // (ACTUALIZACIÓN: Agregado parametro cantidadOverride para ráfagas)
+            function crearParticulas(colorHex, mallaLienzo, cantidadOverride = null) {
+                if (!configNFT.particlesEnabled && !cantidadOverride) return;
 
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = configNFT.particleCount; 
+                // Usa el conteo base o el override (burst) de la transición mágica
+                const cantidad = cantidadOverride !== null ? cantidadOverride : configNFT.particleCount; 
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
@@ -479,7 +497,8 @@ async function inicializarVisorColeccion(coleccion, id) {
                         return;
                     }
 
-                    const duracion = configNFT.transitionDuration; 
+                    // ACTUALIZACIÓN: Usa duracion de transition normal o mágica según JSON
+                    const duracion = configNFT.magicTransitionEnabled ? configNFT.magicTransitionDuration : configNFT.transitionDuration; 
                     const inicio = performance.now();
                     const material = lienzo.material;
 
@@ -504,10 +523,14 @@ async function inicializarVisorColeccion(coleccion, id) {
                         const curvaLuz = Math.sin(t * Math.PI);
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
-                        material.emissiveIntensity = curvaLuz * configNFT.bloomStrength;
+                        
+                        // ACTUALIZACIÓN: Usa la intensidad mágica del JSON
+                        material.emissiveIntensity = curvaLuz * (configNFT.magicTransitionEnabled ? configNFT.magicTransitionIntensity : configNFT.bloomStrength);
 
                         if (t < 0.5) {
-                            const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * 0.03; 
+                            // ACTUALIZACIÓN: Usa la intensidad de temblor ("shake") del JSON
+                            const shakeFactor = configNFT.magicTransitionEnabled ? configNFT.magicTransitionShake : 0.03;
+                            const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * shakeFactor; 
                             
                             model.position.set(
                                 posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
@@ -526,7 +549,9 @@ async function inicializarVisorColeccion(coleccion, id) {
                             }
 
                             if (!particulasGeneradas) {
-                                crearParticulas(colorMagia, lienzo);
+                                // ACTUALIZACIÓN: Inyectar la "ráfaga" (burst) de partículas si la transición mágica está activada
+                                const burst = configNFT.magicTransitionEnabled ? configNFT.magicTransitionParticleBurst : null;
+                                crearParticulas(colorMagia, lienzo, burst);
                                 particulasGeneradas = true;
                             }
                         }
