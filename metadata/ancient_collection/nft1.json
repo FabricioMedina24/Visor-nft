@@ -21,7 +21,7 @@
 
   "particles": {
     "enabled": true,
-    "count": 40,
+    "count": 20,
     "color": "#ffeaba",
     "speed": 1.0,
     "size_factor": 0.0015
@@ -37,7 +37,7 @@
   "magic_transition": {
     "enabled": true,
     "intensity": 2.0,
-    "bloom_strength": 8.0,
+    "bloom_strength": 2.0,
     "duration": 1500,
     "shake": 0.03,
     "particle_burst": 100
