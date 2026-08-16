@@ -12,17 +12,17 @@
   },
   "lighting": {
     "ambient_intensity": 0.5,
-    "camera_light_intensity": 1.4,
-    "bloom_strength": 2.2,
-    "bloom_radius": 0.4,
-    "bloom_threshold": 0.88
+    "camera_light_intensity": 1.2,
+    "bloom_strength": 0.5,
+    "bloom_radius": 0.2,
+    "bloom_threshold": 1.0
   },
   "particles": {
-    "enabled": true,
-    "count": 45,
+    "enabled": false,
+    "count": 40,
     "color": "#ffeaba",
     "speed": 1.0,
-    "size_factor": 0.0022
+    "size_factor": 0.0015
   },
   "canvas": {
     "emissive_color": "#ffeaba",
