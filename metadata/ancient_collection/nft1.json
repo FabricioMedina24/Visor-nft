@@ -4,6 +4,7 @@
   "frames_count": 5,
   "cycle_interval": 30000,
   "background_image": "environments/bg_4.png",
+  
   "transform": {
     "scale": 1.0,
     "rotation_y": 0,
@@ -11,17 +12,17 @@
   },
   "lighting": {
     "ambient_intensity": 0.5,
-    "camera_light_intensity": 1.2,
-    "bloom_strength": 0.5,
-    "bloom_radius": 0.2,
-    "bloom_threshold": 1.0
+    "camera_light_intensity": 1.4,
+    "bloom_strength": 2.2,
+    "bloom_radius": 0.4,
+    "bloom_threshold": 0.88
   },
   "particles": {
     "enabled": true,
-    "count": 40,
+    "count": 45,
     "color": "#ffeaba",
     "speed": 1.0,
-    "size_factor": 0.0015
+    "size_factor": 0.0022
   },
   "canvas": {
     "emissive_color": "#ffeaba",
