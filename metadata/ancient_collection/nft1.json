@@ -21,7 +21,7 @@
 
   "particles": {
     "enabled": true,
-    "count": 20,
+    "count": 10,
     "color": "#ffeaba",
     "speed": 1.0,
     "size_factor": 0.0015
@@ -31,16 +31,16 @@
     "emissive_color": "#ffeaba",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
-    "intro_bloom_strength": 2.0
+    "intro_bloom_strength": 3.0
   },
 
   "magic_transition": {
     "enabled": true,
-    "intensity": 2.0,
-    "bloom_strength": 2.0,
+    "intensity": 3.0,
+    "bloom_strength": 1.0,
     "duration": 1500,
     "shake": 0.03,
-    "particle_burst": 100
+    "particle_burst": 20
   },
 
   "camera": {

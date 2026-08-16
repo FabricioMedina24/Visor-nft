@@ -1,60 +1,52 @@
 {
-  // ==========================================
-  // METADATOS BÁSICOS
-  // ==========================================
-  "id": "1",                           // Identificador único del modelo o NFT.
-  "rarity": "Legendary",               // Define los valores por defecto (color, brillo) si faltan datos en este JSON.
-  "frames_count": 5,                   // Número total de imágenes/texturas que se alternarán en el lienzo.
-  "cycle_interval": 30000,             // Tiempo (en milisegundos) que tarda en cambiar de una imagen a otra (30000 = 30 segundos).
-  "background_image": "environments/bg_4.png", // Ruta de la imagen que se usará como fondo (cielo/entorno).
+  "id": "1",                           // Identificador del modelo o NFT.
+  "rarity": "Legendary",               // Nivel de rareza (sirve para aplicar colores o valores por defecto).
+  "frames_count": 5,                   // Cantidad de imágenes diferentes que tiene el lienzo (para el carrusel).
+  "cycle_interval": 30000,             // Tiempo que tarda en cambiar a la siguiente imagen (en milisegundos, 30000 = 30 segundos).
+  "background_image": "environments/bg_4.png", // Imagen de fondo que se ve detrás de la escena 3D.
 
-  // ==========================================
-  // TRANSFORMACIÓN DEL MODELO 3D
-  // ==========================================
   "transform": {
-    "scale": 1.0,                      // Tamaño general del modelo (1.0 = 100%, 0.5 = la mitad, etc.).
-    "rotation_y": 0,                   // Rotación inicial del modelo sobre el eje Y (expresada en grados).
-    "offset_y": 0.0                    // Ajuste de altura (eje Y) para subir o bajar el modelo si no está bien centrado.
+    "scale": 1.0,                      // Tamaño del cuadro (1.0 = tamaño normal, 2.0 = doble de grande).
+    "rotation_y": 0,                   // Giro inicial del cuadro (de izquierda a derecha).
+    "offset_y": 0.0                    // Ajuste de altura del cuadro (positivo sube, negativo baja).
   },
 
-  // ==========================================
-  // ILUMINACIÓN Y POSTPROCESADO (BLOOM)
-  // ==========================================
   "lighting": {
-    "ambient_intensity": 0.5,          // Fuerza de la luz ambiental que ilumina toda la escena uniformemente.
-    "camera_light_intensity": 1.8,     // Intensidad de la luz frontal anclada a la cámara (ilumina lo que estás mirando).
-    "bloom_strength": 4.5,             // Fuerza del resplandor/brillo (Bloom) del lienzo y partículas.
-    "bloom_radius": 0.4,               // Qué tan lejos se difumina o expande el efecto de resplandor.
-    "bloom_threshold": 0.85            // Límite de oscuridad. Solo los objetos con luminosidad mayor a 0.85 emitirán resplandor.
+    "ambient_intensity": 0.5,          // Fuerza de la luz general de todo el entorno.
+    "camera_light_intensity": 1.2,     // Fuerza de la luz frontal (como si la cámara tuviera un flash encendido).
+    "bloom_strength": 0.5,             // Fuerza general del efecto de resplandor/brillo (Bloom).
+    "bloom_radius": 0.2,               // Qué tan difuminado o expandido es ese resplandor.
+    "bloom_threshold": 1.0             // Nivel mínimo de luz que necesita un objeto para empezar a brillar.
   },
 
-  // ==========================================
-  // SISTEMA DE PARTÍCULAS (POLVO MÁGICO)
-  // ==========================================
   "particles": {
-    "enabled": true,                   // Interruptor: "true" para activar las partículas, "false" para apagarlas.
-    "count": 50,                       // Cantidad de partículas que explotan o se emiten en cada transición.
-    "color": "#ffeaba",                // Color de las partículas (código hexadecimal).
-    "speed": 1.0,                      // Multiplicador de la velocidad a la que se dispersan en el aire.
-    "size_factor": 0.0035              // Multiplicador del tamaño de cada partícula, relativo al tamaño del modelo.
+    "enabled": true,                   // Activa (true) o desactiva (false) las partículas que flotan.
+    "count": 10,                       // Cantidad constante de partículas flotando.
+    "color": "#ffeaba",                // Color de las partículas.
+    "speed": 1.0,                      // Velocidad a la que se mueven.
+    "size_factor": 0.0015              // Tamaño individual de cada partícula.
   },
 
-  // ==========================================
-  // COMPORTAMIENTO DEL LIENZO / CUADRO
-  // ==========================================
   "canvas": {
-    "emissive_color": "#ffeaba",       // Color base del resplandor (luz propia) que emite el lienzo durante la transición.
-    "transition_duration": 1500,       // Duración (en milisegundos) del destello/temblor al cambiar de imagen (1500 = 1.5 segundos).
-    "intro_spin_speed": 16             // Cantidad de vueltas rápidas que da el modelo al cargar la página (animación de entrada).
+    "emissive_color": "#ffeaba",       // Color base del brillo o magia que sale del lienzo.
+    "transition_duration": 1500,       // Cuánto tarda en revelarse la pintura inicial (en milisegundos).
+    "intro_spin_speed": 16,            // Cantidad/velocidad de vueltas que da el cuadro en su animación de entrada.
+    "intro_bloom_strength": 3.0        // Fuerza del resplandor justo cuando el cuadro termina de dar vueltas.
   },
 
-  // ==========================================
-  // CÁMARA E INTERACCIÓN DEL USUARIO
-  // ==========================================
+  "magic_transition": {
+    "enabled": true,                   // Activa o desactiva el efecto especial al cambiar de una imagen a otra.
+    "intensity": 3.0,                  // Fuerza de la luz/magia durante el cambio de imagen.
+    "bloom_strength": 3.0,             // Nivel de resplandor extremo durante el cambio.
+    "duration": 1500,                  // Cuánto dura la animación de cambiar de imagen (en milisegundos).
+    "shake": 0.03,                     // Cuánto "tiembla" o vibra el cuadro durante el cambio (0.03 es muy sutil).
+    "particle_burst": 100              // Cantidad de partículas que explotan de golpe al cambiar de imagen.
+  },
+
   "camera": {
-    "fov": 75,                         // Campo de visión (Field of View). Un número mayor hace un efecto de "ojo de pez".
-    "distance_factor": 0.9,            // Ajusta qué tan lejos o cerca inicia la cámara (menor = más cerca del modelo).
-    "auto_rotate_speed": 1.2,          // Velocidad a la que el modelo gira solo cuando nadie lo está tocando.
-    "inactivity_delay": 5000           // Tiempo de espera (en milisegundos) antes de volver a girar solo si el usuario deja de interactuar (5000 = 5 segundos).
+    "fov": 75,                         // Campo de visión de la cámara (efecto de lente, 75 es un valor estándar).
+    "distance_factor": 0.9,            // Qué tan cerca inicia la cámara del cuadro (menor = más cerca).
+    "auto_rotate_speed": 1.2,          // Velocidad a la que la cámara gira sola alrededor del cuadro.
+    "inactivity_delay": 5000           // Tiempo que debes dejar de tocar la pantalla para que vuelva a girar sola (5000 = 5 seg).
   }
 }
