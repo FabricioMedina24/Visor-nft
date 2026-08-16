@@ -4,35 +4,30 @@
   "frames_count": 5,
   "cycle_interval": 30000,
   "background_image": "environments/bg_4.png",
-  
   "transform": {
     "scale": 1.0,
     "rotation_y": 0,
     "offset_y": 0.0
   },
-
   "lighting": {
-    "ambient_intensity": 0.35,
-    "camera_light_intensity": 1.4,
-    "bloom_strength": 4.5,
-    "bloom_radius": 0.0,
-    "bloom_threshold": 0.85
+    "ambient_intensity": 0.5,
+    "camera_light_intensity": 1.2,
+    "bloom_strength": 0.5,
+    "bloom_radius": 0.2,
+    "bloom_threshold": 1.0
   },
-
   "particles": {
     "enabled": true,
-    "count": 50,
+    "count": 40,
     "color": "#ffeaba",
     "speed": 1.0,
-    "size_factor": 0.0035
+    "size_factor": 0.0015
   },
-
   "canvas": {
     "emissive_color": "#ffeaba",
     "transition_duration": 1500,
     "intro_spin_speed": 16
   },
-  
   "camera": {
     "fov": 75,
     "distance_factor": 0.9,
