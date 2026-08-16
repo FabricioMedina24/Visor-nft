@@ -283,20 +283,24 @@ async function inicializarVisorColeccion(coleccion, id) {
     composer.addPass(bloomPass); 
     composer.addPass(outputPass);
 
-    // =======================================================
-    // Entorno de Luces PMREM (Sin los cuadrados blancos)
-    // =======================================================
+    // Entorno de Luces PMREM
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
 
     const envScene = new THREE.Scene();
     const roomGeo = new THREE.SphereGeometry(15, 32, 16);
-    // Un entorno gris suave para que el marco no se vea negro, pero sin formas geométricas
-    const roomMat = new THREE.MeshBasicMaterial({ color: 0x666666, side: THREE.BackSide }); 
+    const roomMat = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.BackSide }); 
     envScene.add(new THREE.Mesh(roomGeo, roomMat));
 
+    const studioLight1 = new THREE.Mesh(new THREE.BoxGeometry(3, 8, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    studioLight1.position.set(6, 4, 5);
+    envScene.add(studioLight1);
+
+    const studioLight2 = new THREE.Mesh(new THREE.BoxGeometry(8, 2, 0.5), new THREE.MeshBasicMaterial({ color: 0x888888 }));
+    studioLight2.position.set(-6, 6, -3);
+    envScene.add(studioLight2);
+
     scene.environment = pmremGenerator.fromScene(envScene).texture;
-    // =======================================================
 
     // Iluminación dinámica desde JSON
     const ambientLight = new THREE.AmbientLight(0xffffff, configNFT.ambientIntensity); 
