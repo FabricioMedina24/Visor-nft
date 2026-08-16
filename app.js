@@ -141,7 +141,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             transitionDuration: metadata.canvas?.transition_duration ?? CONFIG_POR_DEFECTO.transitionDuration,
             introSpinSpeed: metadata.canvas?.intro_spin_speed ?? CONFIG_POR_DEFECTO.introSpinSpeed,
 
-            // Transición Mágica (¡NUEVO!)
+            // Transición Mágica
             magicTransitionEnabled: metadata.magic_transition?.enabled ?? CONFIG_POR_DEFECTO.magicTransitionEnabled,
             magicTransitionIntensity: metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionIntensity,
             magicTransitionBloomStrength: metadata.magic_transition?.bloom_strength ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength,
@@ -346,9 +346,9 @@ async function inicializarVisorColeccion(coleccion, id) {
             // =======================================================
             // FUNCIÓN: POLVO MÁGICO / PARTÍCULAS
             // =======================================================
-            // (ACTUALIZACIÓN: Agregado parametro cantidadOverride para ráfagas)
             function crearParticulas(colorHex, mallaLienzo, cantidadOverride = null) {
                 if (!configNFT.particlesEnabled && !cantidadOverride) return;
+                if (!mallaLienzo) return; // Protección por si la malla no existe
 
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
@@ -412,6 +412,15 @@ async function inicializarVisorColeccion(coleccion, id) {
                 });
             }
             
+            // Función auxiliar para ocular el loader de forma segura
+            const loaderContainer = document.getElementById('loader-container');
+            function ocultarLoader() {
+                if (loaderContainer) {
+                    loaderContainer.style.opacity = '0';
+                    setTimeout(() => loaderContainer.remove(), 400); 
+                }
+            }
+            
             if (lienzo && lienzo.material) {
                 lienzo.material.map = null; 
                 lienzo.material.color.setHex(0x000000); 
@@ -447,6 +456,7 @@ async function inicializarVisorColeccion(coleccion, id) {
                         const ahora = performance.now();
                         let t = (ahora - inicioEntrada) / duracionEntrada;
 
+                        // Seguro anti-framedrops: Aplicar estados finales estrictos al concluir
                         if (t >= 1) {
                             model.rotation.y = THREE.MathUtils.degToRad(configNFT.rotationY); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
@@ -457,6 +467,11 @@ async function inicializarVisorColeccion(coleccion, id) {
                                 material.map = texturas[0];
                                 material.needsUpdate = true;
                                 indiceActual = 0;
+                            }
+                            
+                            if (!particulasGeneradas) {
+                                crearParticulas(colorMagia, lienzo);
+                                particulasGeneradas = true;
                             }
                             return; 
                         }
@@ -497,7 +512,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                         return;
                     }
 
-                    // ACTUALIZACIÓN: Usa duracion de transition normal o mágica según JSON
                     const duracion = configNFT.magicTransitionEnabled ? configNFT.magicTransitionDuration : configNFT.transitionDuration; 
                     const inicio = performance.now();
                     const material = lienzo.material;
@@ -513,10 +527,23 @@ async function inicializarVisorColeccion(coleccion, id) {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
+                        // Seguro anti-framedrops: Estados finales
                         if (t >= 1) {
                             model.position.copy(posOriginal); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
+                            
+                            if (material.map !== nuevaTextura) {
+                                material.color.setHex(0xffffff); 
+                                material.map = nuevaTextura;
+                                material.needsUpdate = true;
+                            }
+                            
+                            if (!particulasGeneradas) {
+                                const burst = configNFT.magicTransitionEnabled ? configNFT.magicTransitionParticleBurst : null;
+                                crearParticulas(colorMagia, lienzo, burst);
+                                particulasGeneradas = true;
+                            }
                             return;
                         }
 
@@ -524,11 +551,9 @@ async function inicializarVisorColeccion(coleccion, id) {
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
                         
-                        // ACTUALIZACIÓN: Usa la intensidad mágica del JSON
                         material.emissiveIntensity = curvaLuz * (configNFT.magicTransitionEnabled ? configNFT.magicTransitionIntensity : configNFT.bloomStrength);
 
                         if (t < 0.5) {
-                            // ACTUALIZACIÓN: Usa la intensidad de temblor ("shake") del JSON
                             const shakeFactor = configNFT.magicTransitionEnabled ? configNFT.magicTransitionShake : 0.03;
                             const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * shakeFactor; 
                             
@@ -549,7 +574,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                             }
 
                             if (!particulasGeneradas) {
-                                // ACTUALIZACIÓN: Inyectar la "ráfaga" (burst) de partículas si la transición mágica está activada
                                 const burst = configNFT.magicTransitionEnabled ? configNFT.magicTransitionParticleBurst : null;
                                 crearParticulas(colorMagia, lienzo, burst);
                                 particulasGeneradas = true;
@@ -575,16 +599,12 @@ async function inicializarVisorColeccion(coleccion, id) {
                     }, configNFT.cycleInterval);
                 }
 
-                const loaderContainer = document.getElementById('loader-container');
-                if (loaderContainer) {
-                    iniciarEntradaMagica(); 
-                    loaderContainer.style.opacity = '0';
-                    setTimeout(() => {
-                        loaderContainer.remove();
-                    }, 400); 
-                } else {
-                    iniciarEntradaMagica();
-                }
+                iniciarEntradaMagica();
+                ocultarLoader();
+                
+            } else {
+                // Si el modelo carga pero no existe el lienzo, al menos quitamos la pantalla de carga para que no se quede congelado
+                ocultarLoader();
             }
         }, 
         function (xhr) {}, 
@@ -608,7 +628,9 @@ async function inicializarVisorColeccion(coleccion, id) {
             sistema.vida -= sistema.decaimiento;
             
             if (sistema.vida <= 0) {
-                sistema.mesh.parent.remove(sistema.mesh);
+                if (sistema.mesh.parent) {
+                    sistema.mesh.parent.remove(sistema.mesh);
+                }
                 sistema.mesh.geometry.dispose();
                 sistema.mesh.material.dispose();
                 sistemasDeParticulas.splice(i, 1);
