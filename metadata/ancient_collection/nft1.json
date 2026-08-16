@@ -31,15 +31,15 @@
     "emissive_color": "#ffeaba",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
-    "intro_bloom_strength": 5.0
+    "intro_bloom_strength": 8.0
   },
 
   "magic_transition": {
     "enabled": true,
-    "intensity": 5.0,
-    "bloom_strength": 2.0,
+    "intensity": 8.0,
+    "bloom_strength": 3.0,
     "duration": 1500,
-    "shake": 0.03,
+    "shake": 0.09,
     "particle_burst": 20
   },
 
