@@ -1,0 +1,135 @@
+--- RAREZAS (BASE) ---
+Divine: #ff00ff
+Legendary: #ffeaba
+Epic: #00ffff
+Rare: #00ff00
+Common (Oscuro): #000000
+Common (Claro): #ffffff
+
+--- FUEGO Y ENERGÍA ---
+Rojo Neón / Láser: #ff0000
+Naranja Fuego: #ff4500
+Ámbar / Lava: #ffbf00
+Amarillo Eléctrico: #ffff00
+Dorado Brillante: #ffd700
+
+--- HIELO Y ARCANO ---
+Azul Eléctrico puro: #0000ff
+Azul Neón / Cibernético: #1f51ff
+Celeste Hielo / Cian: #00ffff
+Zafiro Profundo: #0f52ba
+Azul Agua Marina: #7fffd4
+
+--- VENENO, ÁCIDO Y NATURALEZA ---
+Verde Tóxico / Radiactivo: #39ff14
+Verde Esmeralda: #50c878
+Verde Lima (Ácido): #bfff00
+Verde Menta Brillante: #00ff7f
+Verde Bosque: #228b22
+
+--- CÓSMICO Y MÍSTICO ---
+Púrpura Neón: #bc13fe
+Violeta Mágico: #8a2be2
+Rosa Neón / Cyberpunk: #ff1493
+Lila Suave / Astral: #e0b0ff
+Rojo Carmesí Oscuro: #8b0000
+
+--- METALES Y NEUTROS ---
+Blanco Puro (Brillo máximo): #ffffff
+Plata / Acero Brillante: #c0c0c0
+Bronce Antiguo: #cd7f32
+Humo / Gris Fantasmal: #808080
+
+--- NEONES Y CYBERPUNK (Efecto Bloom Extremo) ---
+Verde Matrix: #00FF41
+Amarillo Radiactivo: #E0FF00
+Rosa Plástico / Barbie: #E0218A
+Cyan Láser: #00EAFF
+Rojo Alarma: #FF2400
+Naranja Vulcano: #FF5E00
+Púrpura Galáctico: #6600FF
+Verde Fantasma: #8DFF00
+Azul Neón Claro: #39FF14
+
+--- ROJOS Y GRANATES ---
+Rojo Sangre: #8A0303
+Rojo Cereza: #D2042D
+Rojo Carmesí: #DC143C
+Granate / Borgoña: #800000
+Rojo Ladrillo: #B22222
+Rojo Tomate: #FF6347
+Rojo Vino: #722F37
+
+--- NARANJAS Y CORALES ---
+Naranja Zanahoria: #ED9121
+Mandarina: #F28500
+Coral: #FF7F50
+Melocotón: #FFE5B4
+Óxido: #B7410E
+Salmón: #FA8072
+Calabaza: #FF7518
+
+--- AMARILLOS Y DORADOS ---
+Amarillo Limón: #FFF44F
+Amarillo Mostaza: #FFDB58
+Oro Viejo: #CFB53B
+Amarillo Vainilla: #F3E5AB
+Amarillo Canario: #FFEF00
+Oro Rosado (Rose Gold): #B76E79
+Maíz: #FBEC5D
+
+--- VERDES Y NATURALEZA ---
+Verde Oliva: #808000
+Verde Musgo: #8A9A5B
+Verde Selva: #29AB87
+Verde Pistacho: #93C572
+Verde Malaquita: #0BDA51
+Verde Alga: #43B02A
+Verde Jade: #00A86B
+Verde Neón Puro: #00FF00
+
+--- AZULES Y OCÉANO ---
+Azul Marino: #000080
+Azul Cielo: #87CEEB
+Azul Cobalto: #0047AB
+Azul Real: #4169E1
+Azul Acero: #4682B4
+Azul Medianoche: #191970
+Azul Hielo Claro: #A5F2F3
+Cian Oscuro: #008B8B
+Turquesa: #40E0D0
+
+--- MORADOS Y PÚRPURAS ---
+Índigo: #4B0082
+Amatista: #9966CC
+Ciruela: #8E4585
+Lavanda: #E6E6FA
+Orquídea: #DA70D6
+Púrpura Imperial: #66023C
+Fucsia Oscuro: #C154C1
+Magenta Profundo: #8B008B
+
+--- TONOS PASTEL (Suaves y Mágicos) ---
+Rosa Pastel: #FFD1DC
+Azul Pastel: #AEC6CF
+Amarillo Pastel: #FDFD96
+Verde Pastel: #77DD77
+Morado Pastel: #B39EB5
+Naranja Pastel: #FFB347
+
+--- TIERRA, MADERA Y METALES ---
+Cobre: #B87333
+Latón: #B5A642
+Sepia: #704214
+Chocolate: #7B3F00
+Café Tostado: #6F4E37
+Castaño: #954535
+
+--- BLANCOS, GRISES Y NEGROS ---
+Blanco Hueso: #F9F6EE
+Blanco Perla: #EAE0C8
+Gris Claro: #D3D3D3
+Gris Pizarra: #708090
+Antracita: #293133
+Ónix: #353839
+Negro Ébano: #555D50

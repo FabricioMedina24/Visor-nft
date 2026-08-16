@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// Importaciones requeridas para el canal de Bloom cinematográfico
+// Importaciones requeridas para el canal de Postprocesado (Bloom)
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -10,9 +10,24 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 let composer; 
 
+// =========================================================================
+// ENRUTADOR DINÁMICO UNIVERSAL DE COLECCIONES
+// =========================================================================
+const urlParams = new URLSearchParams(window.location.search);
+
+const coleccionActual = urlParams.get('collection') || 'first_collection';
+const modelId = urlParams.get('id') || '1';
+
 requestAnimationFrame(() => {
-    setTimeout(inicializarVisor3D, 50);
+    setTimeout(() => {
+        iniciarColeccion(coleccionActual, modelId);
+    }, 50);
 });
+
+function iniciarColeccion(coleccion, id) {
+    console.log(`Iniciando visor dinámico para: Colección [${coleccion}] - NFT ID [${id}]`);
+    inicializarVisorColeccion(coleccion, id);
+}
 
 // =========================================================================
 // CONFIGURACIÓN POR DEFECTO Y VALORES POR RAREZA
@@ -24,44 +39,112 @@ const CONFIG_POR_DEFECTO = {
     colorMagia: 0x000000,   
     fuerzaBloom: 0.0,       
     colorFondo: 0x0b0b0b,
-    backgroundImage: null 
+    backgroundImage: null,
+    
+    // Transformaciones
+    scale: 1.0,
+    rotationY: 0,
+    offsetY: 0.0,
+
+    // Iluminación y Postprocesado
+    ambientIntensity: 0.35,
+    cameraLightIntensity: 1.4,
+    bloomStrength: 0.0,
+    bloomRadius: 0.4,
+    bloomThreshold: 0.85,
+
+    // Partículas
+    particlesEnabled: true,
+    particleCount: 35,
+    particleColor: 0x000000,
+    particleSpeed: 1.0,
+    particleSizeFactor: 0.0035,
+
+    // Lienzo y Transiciones
+    emissiveColor: 0x000000,
+    transitionDuration: 1500,
+    introSpinSpeed: 16,
+
+    // Cámara
+    cameraFov: 75,
+    cameraDistanceFactor: 0.9,
+    autoRotateSpeed: 1.0,
+    inactivityDelay: 5000
 };
 
 const CONFIGURACION_RAREZAS = {
-    divine:    { colorMagia: 0xff00ff, fuerzaBloom: 6.0,  colorFondo: 0x05000a }, 
-    legendary: { colorMagia: 0xffeaba, fuerzaBloom: 4.5,  colorFondo: 0x0b0b0b }, 
-    epic:      { colorMagia: 0x00ffff, fuerzaBloom: 3.5,  colorFondo: 0x0b0b0b }, 
-    rare:      { colorMagia: 0x00ff00, fuerzaBloom: 2.5,  colorFondo: 0x0b0b0b }, 
-    common:    { colorMagia: 0x000000, fuerzaBloom: 0.0,  colorFondo: 0x0b0b0b } 
+    divine:    { colorMagia: 0xff00ff, fuerzaBloom: 6.0, colorFondo: 0x05000a }, 
+    legendary: { colorMagia: 0xffeaba, fuerzaBloom: 4.5, colorFondo: 0x0b0b0b }, 
+    epic:      { colorMagia: 0x00ffff, fuerzaBloom: 3.5, colorFondo: 0x0b0b0b }, 
+    rare:      { colorMagia: 0x00ff00, fuerzaBloom: 2.5, colorFondo: 0x0b0b0b }, 
+    common:    { colorMagia: 0x000000, fuerzaBloom: 0.0, colorFondo: 0x0b0b0b } 
 };
 
-async function obtenerConfiguracionNFT(modelId) {
+function parsearHexColor(color, fallback) {
+    if (!color) return fallback;
+    if (typeof color === 'number') return color;
+    if (typeof color === 'string') {
+        const hexLimpio = color.replace('#', '');
+        return parseInt(hexLimpio, 16);
+    }
+    return fallback;
+}
+
+async function obtenerConfiguracionNFT(coleccion, id) {
     try {
-        const urlMetadatos = `metadata/nft${modelId}.json`; 
+        const urlMetadatos = `metadata/${coleccion}/nft${id}.json`; 
         const respuesta = await fetch(urlMetadatos);
-        if (!respuesta.ok) throw new Error(`No se encontró el archivo: ${urlMetadatos}`);
+        if (!respuesta.ok) throw new Error(`No se encontró el archivo de metadatos: ${urlMetadatos}`);
         
         const metadata = await respuesta.json();
         const rarezaLimpia = metadata.rarity ? metadata.rarity.toLowerCase() : 'common';
         const estilosRareza = CONFIGURACION_RAREZAS[rarezaLimpia] || CONFIGURACION_RAREZAS['common'];
 
+        const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
+
         return {
-            ...CONFIG_POR_DEFECTO,
             rarity: rarezaLimpia,
-            framesCount: metadata.frames_count !== undefined ? metadata.frames_count : CONFIG_POR_DEFECTO.framesCount,
-            cycleInterval: metadata.cycle_interval !== undefined ? metadata.cycle_interval : CONFIG_POR_DEFECTO.cycleInterval,
-            
-            // CONFIGURADO PARA PNG: Lee el PNG del JSON, o busca bg_ID.png por defecto si no existe
-            backgroundImage: metadata.background_image || `environments/bg_${modelId}.png`, 
-            
-            ...estilosRareza 
+            framesCount: metadata.frames_count ?? CONFIG_POR_DEFECTO.framesCount,
+            cycleInterval: metadata.cycle_interval ?? CONFIG_POR_DEFECTO.cycleInterval,
+            backgroundImage: metadata.background_image || `environments/${coleccion}/bg_${id}.png`,
+            colorFondo: estilosRareza.colorFondo,
+
+            // Transformaciones
+            scale: metadata.transform?.scale ?? CONFIG_POR_DEFECTO.scale,
+            rotationY: metadata.transform?.rotation_y ?? CONFIG_POR_DEFECTO.rotationY,
+            offsetY: metadata.transform?.offset_y ?? CONFIG_POR_DEFECTO.offsetY,
+
+            // Iluminación
+            ambientIntensity: metadata.lighting?.ambient_intensity ?? CONFIG_POR_DEFECTO.ambientIntensity,
+            cameraLightIntensity: metadata.lighting?.camera_light_intensity ?? CONFIG_POR_DEFECTO.cameraLightIntensity,
+            bloomStrength: metadata.lighting?.bloom_strength ?? estilosRareza.fuerzaBloom,
+            bloomRadius: metadata.lighting?.bloom_radius ?? CONFIG_POR_DEFECTO.bloomRadius,
+            bloomThreshold: metadata.lighting?.bloom_threshold ?? CONFIG_POR_DEFECTO.bloomThreshold,
+
+            // Partículas
+            particlesEnabled: metadata.particles?.enabled ?? CONFIG_POR_DEFECTO.particlesEnabled,
+            particleCount: metadata.particles?.count ?? CONFIG_POR_DEFECTO.particleCount,
+            particleColor: parsearHexColor(metadata.particles?.color, colorBaseMagia),
+            particleSpeed: metadata.particles?.speed ?? CONFIG_POR_DEFECTO.particleSpeed,
+            particleSizeFactor: metadata.particles?.size_factor ?? CONFIG_POR_DEFECTO.particleSizeFactor,
+
+            // Lienzo
+            emissiveColor: colorBaseMagia,
+            transitionDuration: metadata.canvas?.transition_duration ?? CONFIG_POR_DEFECTO.transitionDuration,
+            introSpinSpeed: metadata.canvas?.intro_spin_speed ?? CONFIG_POR_DEFECTO.introSpinSpeed,
+
+            // Cámara
+            cameraFov: metadata.camera?.fov ?? CONFIG_POR_DEFECTO.cameraFov,
+            cameraDistanceFactor: metadata.camera?.distance_factor ?? CONFIG_POR_DEFECTO.cameraDistanceFactor,
+            autoRotateSpeed: metadata.camera?.auto_rotate_speed ?? CONFIG_POR_DEFECTO.autoRotateSpeed,
+            inactivityDelay: metadata.camera?.inactivity_delay ?? CONFIG_POR_DEFECTO.inactivityDelay
         };
 
     } catch (error) {
         console.warn(`Aviso: Usando configuración estática por defecto debido a: ${error.message}`);
         return {
             ...CONFIG_POR_DEFECTO,
-            backgroundImage: `environments/bg_${modelId}.png` 
+            backgroundImage: `environments/${coleccion}/bg_${id}.png` 
         }; 
     }
 }
@@ -88,19 +171,18 @@ function crearTexturaCirculo() {
 
 const texturaParticula = crearTexturaCirculo();
 
-async function inicializarVisor3D() {
-    const urlParams = new URLSearchParams(window.location.search);
-    let modelId = urlParams.get('id') || '1';
-
-    const configNFT = await obtenerConfiguracionNFT(modelId);
-    const modelPath = `models/nft${modelId}.glb`;
+// =======================================================
+// LÓGICA PRINCIPAL DEL VISOR 3D (UNIVERSAL)
+// =======================================================
+async function inicializarVisorColeccion(coleccion, id) {
+    const configNFT = await obtenerConfiguracionNFT(coleccion, id);
+    
+    const modelPath = `models/${coleccion}/nft${id}.glb`;
     const sistemasDeParticulas = [];
 
     const scene = new THREE.Scene();
 
-    // =======================================================
-    // CARGA DE FONDO (IMAGEN PNG O COLOR DE RESPALDO)
-    // =======================================================
+    // Carga de imagen de fondo o color
     if (configNFT.backgroundImage) {
         const bgLoader = new THREE.TextureLoader();
         bgLoader.load(
@@ -111,7 +193,7 @@ async function inicializarVisor3D() {
             },
             undefined,
             function (err) {
-                console.warn(`No se pudo cargar la imagen PNG: ${configNFT.backgroundImage}. Usando color de respaldo.`);
+                console.warn(`No se pudo cargar la imagen de fondo: ${configNFT.backgroundImage}. Usando color de respaldo.`);
                 scene.background = new THREE.Color(configNFT.colorFondo); 
             }
         );
@@ -119,7 +201,8 @@ async function inicializarVisor3D() {
         scene.background = new THREE.Color(configNFT.colorFondo); 
     }
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    // Configuración de Cámara dinámicamente según JSON
+    const camera = new THREE.PerspectiveCamera(configNFT.cameraFov, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     const renderer = new THREE.WebGLRenderer({ 
         antialias: true, 
@@ -141,7 +224,7 @@ async function inicializarVisor3D() {
 
     function startAutoRotation() {
         controls.autoRotate = true;
-        controls.autoRotateSpeed = 1.0; 
+        controls.autoRotateSpeed = configNFT.autoRotateSpeed; 
     }
 
     function resetInactivityTimer() {
@@ -152,7 +235,7 @@ async function inicializarVisor3D() {
         autoRotateTimeout = setTimeout(() => {
             isUserInteracting = false;
             startAutoRotation();
-        }, 5000);
+        }, configNFT.inactivityDelay);
     }
 
     controls.addEventListener('start', () => {
@@ -164,15 +247,14 @@ async function inicializarVisor3D() {
     controls.addEventListener('end', resetInactivityTimer);
     startAutoRotation();
 
+    // Postprocesado (Bloom parametrizado)
     const renderScene = new RenderPass(scene, camera);
-    
-    // =======================================================
-    // CONFIGURACIÓN DE BLOOM AJUSTADA (SOLUCIÓN AL FONDO BRILLANTE)
-    // =======================================================
-    // Se ha subido el umbral (Threshold) a 1.0 para que ignore por completo el color de fondo PNG.
-    // Se ha subido la fuerza a 0.35 para compensar la pérdida de brillo en los tonos intermedios.
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.4, 1.0);
-    
+    const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight), 
+        configNFT.bloomStrength, 
+        configNFT.bloomRadius, 
+        configNFT.bloomThreshold
+    );
     const outputPass = new OutputPass();
 
     composer = new EffectComposer(renderer);
@@ -180,6 +262,7 @@ async function inicializarVisor3D() {
     composer.addPass(bloomPass); 
     composer.addPass(outputPass);
 
+    // Entorno de Luces PMREM
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
 
@@ -198,10 +281,11 @@ async function inicializarVisor3D() {
 
     scene.environment = pmremGenerator.fromScene(envScene).texture;
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.35); 
+    // Iluminación dinámica desde JSON
+    const ambientLight = new THREE.AmbientLight(0xffffff, configNFT.ambientIntensity); 
     scene.add(ambientLight);
 
-    const cameraLight = new THREE.DirectionalLight(0xffffff, 1.4); 
+    const cameraLight = new THREE.DirectionalLight(0xffffff, configNFT.cameraLightIntensity); 
     cameraLight.position.set(2, 3, 4); 
     camera.add(cameraLight);
     scene.add(camera); 
@@ -214,6 +298,11 @@ async function inicializarVisor3D() {
         function (gltf) {
             const model = gltf.scene;
 
+            // Aplicar transformaciones dinámicas desde metadatos
+            model.scale.setScalar(configNFT.scale);
+            model.rotation.y = THREE.MathUtils.degToRad(configNFT.rotationY);
+            model.position.y += configNFT.offsetY;
+
             model.traverse((child) => {
                 if (child.isMesh) {
                     const mat = child.material;
@@ -225,6 +314,7 @@ async function inicializarVisor3D() {
 
             scene.add(model);
 
+            // Encuadre de cámara dinámico
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
@@ -233,22 +323,26 @@ async function inicializarVisor3D() {
             controls.target.copy(center);
             controls.minDistance = maxDim * 0.45; 
             controls.maxDistance = maxDim * 4.0; 
-            camera.position.set(center.x, center.y, center.z + (maxDim * 0.9));
+            camera.position.set(center.x, center.y, center.z + (maxDim * configNFT.cameraDistanceFactor));
             camera.lookAt(center);
             controls.update();
 
             // =======================================================
-            // FUNCIÓN: POLVO MÁGICO QUE SE QUEDA CERCA DEL CUADRO
+            // FUNCIÓN: POLVO MÁGICO / PARTÍCULAS
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo) {
+                if (!configNFT.particlesEnabled) return;
+
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                const cantidad = 35; 
+                const cantidad = configNFT.particleCount; 
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
                 const velocidades = [];
+
+                const speedMult = configNFT.particleSpeed;
 
                 for(let i = 0; i < cantidad; i++) {
                     const offsetX = (Math.random() - 0.5) * tamanoLienzo.x * 0.95;
@@ -259,9 +353,9 @@ async function inicializarVisor3D() {
                     posiciones[i * 3 + 2] = centroLienzo.z + 0.01; 
 
                     velocidades.push({
-                        x: (Math.random() - 0.5) * 0.0008, 
-                        y: (Math.random() - 0.5) * 0.0008, 
-                        z: (Math.random() * 0.0005) + 0.0002 
+                        x: (Math.random() - 0.5) * 0.0008 * speedMult, 
+                        y: (Math.random() - 0.5) * 0.0008 * speedMult, 
+                        z: ((Math.random() * 0.0005) + 0.0002) * speedMult
                     });
                 }
 
@@ -271,7 +365,7 @@ async function inicializarVisor3D() {
 
                 const materialParticulas = new THREE.PointsMaterial({
                     color: colorMagiaBrillante,
-                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * 0.0035, 
+                    size: Math.max(tamanoLienzo.x, tamanoLienzo.y) * configNFT.particleSizeFactor, 
                     map: texturaParticula, 
                     transparent: true,
                     opacity: 1,
@@ -301,7 +395,6 @@ async function inicializarVisor3D() {
             }
             
             if (lienzo && lienzo.material) {
-                
                 lienzo.material.map = null; 
                 lienzo.material.color.setHex(0x000000); 
                 lienzo.material.needsUpdate = true;
@@ -311,7 +404,7 @@ async function inicializarVisor3D() {
                 let indiceActual = -1; 
 
                 for (let i = 1; i <= configNFT.framesCount; i++) {
-                    const url = `paintings/nft${modelId}/${i}.png`;
+                    const url = `paintings/${coleccion}/nft${id}/${i}.png`;
                     const texturaCarga = textureLoader.load(url, (txt) => {
                         txt.colorSpace = THREE.SRGBColorSpace;
                         txt.flipY = false; 
@@ -323,8 +416,8 @@ async function inicializarVisor3D() {
                     const duracionEntrada = 1800; 
                     const inicioEntrada = performance.now();
                     
-                    const colorMagia = configNFT.fuerzaBloom > 0 ? new THREE.Color(configNFT.colorMagia) : new THREE.Color(0xffffff);
-                    const fuerzaEntrada = configNFT.fuerzaBloom > 0 ? configNFT.fuerzaBloom * 1.5 : 2.5;
+                    const colorMagia = new THREE.Color(configNFT.emissiveColor);
+                    const fuerzaEntrada = configNFT.bloomStrength > 0 ? configNFT.bloomStrength * 1.5 : 2.5;
 
                     const material = lienzo.material;
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
@@ -337,7 +430,7 @@ async function inicializarVisor3D() {
                         let t = (ahora - inicioEntrada) / duracionEntrada;
 
                         if (t >= 1) {
-                            model.rotation.y = 0; 
+                            model.rotation.y = THREE.MathUtils.degToRad(configNFT.rotationY); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             
@@ -351,7 +444,7 @@ async function inicializarVisor3D() {
                         }
 
                         const easeOut = 1 - Math.pow(1 - t, 3);
-                        model.rotation.y = easeOut * (Math.PI * 16); 
+                        model.rotation.y = THREE.MathUtils.degToRad(configNFT.rotationY) + easeOut * (Math.PI * configNFT.introSpinSpeed); 
 
                         const curvaLuz = Math.sin(t * Math.PI); 
                         
@@ -380,22 +473,21 @@ async function inicializarVisor3D() {
                 }
 
                 function hacerTransicionMagica(nuevaTextura) {
-                    if (configNFT.fuerzaBloom <= 0) {
+                    if (configNFT.bloomStrength <= 0) {
                         lienzo.material.map = nuevaTextura;
                         lienzo.material.needsUpdate = true;
                         return;
                     }
 
-                    const duracion = 1500; 
+                    const duracion = configNFT.transitionDuration; 
                     const inicio = performance.now();
                     const material = lienzo.material;
 
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
                     const intensidadOriginal = material.emissiveIntensity !== undefined ? material.emissiveIntensity : 0;
-                    const colorMagia = new THREE.Color(configNFT.colorMagia);
+                    const colorMagia = new THREE.Color(configNFT.emissiveColor);
                     
                     let particulasGeneradas = false;
-
                     const posOriginal = model.position.clone();
 
                     function animarResplandor() {
@@ -412,7 +504,7 @@ async function inicializarVisor3D() {
                         const curvaLuz = Math.sin(t * Math.PI);
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
-                        material.emissiveIntensity = curvaLuz * configNFT.fuerzaBloom;
+                        material.emissiveIntensity = curvaLuz * configNFT.bloomStrength;
 
                         if (t < 0.5) {
                             const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * 0.03; 
@@ -472,15 +564,13 @@ async function inicializarVisor3D() {
         }, 
         function (xhr) {}, 
         function (error) {
-            console.error(`Error al cargar el archivo .glb: ${modelPath}`, error);
+            console.error(`Error al cargar el modelo .glb: ${modelPath}`, error);
             const textElement = document.querySelector('.loading-text');
-            if (textElement) textElement.innerText = "Error al conectar al modelo";
+            if (textElement) textElement.innerText = `Error: No se pudo cargar '${coleccion}' (NFT #${id})`;
         }
     );
 
-    // ==========================================
-    // BUCLE DE ANIMACIÓN PRINCIPAL
-    // ==========================================
+    // Bucle de Animación
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 

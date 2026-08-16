@@ -1,0 +1,60 @@
+{
+  // ==========================================
+  // METADATOS BÁSICOS
+  // ==========================================
+  "id": "1",                           // Identificador único del modelo o NFT.
+  "rarity": "Legendary",               // Define los valores por defecto (color, brillo) si faltan datos en este JSON.
+  "frames_count": 5,                   // Número total de imágenes/texturas que se alternarán en el lienzo.
+  "cycle_interval": 30000,             // Tiempo (en milisegundos) que tarda en cambiar de una imagen a otra (30000 = 30 segundos).
+  "background_image": "environments/bg_4.png", // Ruta de la imagen que se usará como fondo (cielo/entorno).
+
+  // ==========================================
+  // TRANSFORMACIÓN DEL MODELO 3D
+  // ==========================================
+  "transform": {
+    "scale": 1.0,                      // Tamaño general del modelo (1.0 = 100%, 0.5 = la mitad, etc.).
+    "rotation_y": 0,                   // Rotación inicial del modelo sobre el eje Y (expresada en grados).
+    "offset_y": 0.0                    // Ajuste de altura (eje Y) para subir o bajar el modelo si no está bien centrado.
+  },
+
+  // ==========================================
+  // ILUMINACIÓN Y POSTPROCESADO (BLOOM)
+  // ==========================================
+  "lighting": {
+    "ambient_intensity": 0.5,          // Fuerza de la luz ambiental que ilumina toda la escena uniformemente.
+    "camera_light_intensity": 1.8,     // Intensidad de la luz frontal anclada a la cámara (ilumina lo que estás mirando).
+    "bloom_strength": 4.5,             // Fuerza del resplandor/brillo (Bloom) del lienzo y partículas.
+    "bloom_radius": 0.4,               // Qué tan lejos se difumina o expande el efecto de resplandor.
+    "bloom_threshold": 0.85            // Límite de oscuridad. Solo los objetos con luminosidad mayor a 0.85 emitirán resplandor.
+  },
+
+  // ==========================================
+  // SISTEMA DE PARTÍCULAS (POLVO MÁGICO)
+  // ==========================================
+  "particles": {
+    "enabled": true,                   // Interruptor: "true" para activar las partículas, "false" para apagarlas.
+    "count": 50,                       // Cantidad de partículas que explotan o se emiten en cada transición.
+    "color": "#ffeaba",                // Color de las partículas (código hexadecimal).
+    "speed": 1.0,                      // Multiplicador de la velocidad a la que se dispersan en el aire.
+    "size_factor": 0.0035              // Multiplicador del tamaño de cada partícula, relativo al tamaño del modelo.
+  },
+
+  // ==========================================
+  // COMPORTAMIENTO DEL LIENZO / CUADRO
+  // ==========================================
+  "canvas": {
+    "emissive_color": "#ffeaba",       // Color base del resplandor (luz propia) que emite el lienzo durante la transición.
+    "transition_duration": 1500,       // Duración (en milisegundos) del destello/temblor al cambiar de imagen (1500 = 1.5 segundos).
+    "intro_spin_speed": 16             // Cantidad de vueltas rápidas que da el modelo al cargar la página (animación de entrada).
+  },
+
+  // ==========================================
+  // CÁMARA E INTERACCIÓN DEL USUARIO
+  // ==========================================
+  "camera": {
+    "fov": 75,                         // Campo de visión (Field of View). Un número mayor hace un efecto de "ojo de pez".
+    "distance_factor": 0.9,            // Ajusta qué tan lejos o cerca inicia la cámara (menor = más cerca del modelo).
+    "auto_rotate_speed": 1.2,          // Velocidad a la que el modelo gira solo cuando nadie lo está tocando.
+    "inactivity_delay": 5000           // Tiempo de espera (en milisegundos) antes de volver a girar solo si el usuario deja de interactuar (5000 = 5 segundos).
+  }
+}
