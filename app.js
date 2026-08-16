@@ -64,8 +64,9 @@ const CONFIG_POR_DEFECTO = {
     emissiveColor: 0x000000,
     transitionDuration: 1500,
     introSpinSpeed: 16,
+    introBloomStrength: 8.0, // Control de intensidad de la entrada inicial por defecto
 
-    // Transición Mágica (¡NUEVO!)
+    // Transición Mágica
     magicTransitionEnabled: true,
     magicTransitionIntensity: 8.0,
     magicTransitionBloomStrength: 8.0,
@@ -109,6 +110,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const estilosRareza = CONFIGURACION_RAREZAS[rarezaLimpia] || CONFIGURACION_RAREZAS['common'];
 
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
+        const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
         return {
             rarity: rarezaLimpia,
@@ -140,11 +142,14 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             emissiveColor: colorBaseMagia,
             transitionDuration: metadata.canvas?.transition_duration ?? CONFIG_POR_DEFECTO.transitionDuration,
             introSpinSpeed: metadata.canvas?.intro_spin_speed ?? CONFIG_POR_DEFECTO.introSpinSpeed,
+            
+            // INTRO BLOOM STRENGTH (Lee del JSON o toma el valor de la transición mágica)
+            introBloomStrength: metadata.canvas?.intro_bloom_strength ?? magicBloom,
 
             // Transición Mágica
             magicTransitionEnabled: metadata.magic_transition?.enabled ?? CONFIG_POR_DEFECTO.magicTransitionEnabled,
             magicTransitionIntensity: metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionIntensity,
-            magicTransitionBloomStrength: metadata.magic_transition?.bloom_strength ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength,
+            magicTransitionBloomStrength: magicBloom,
             magicTransitionDuration: metadata.magic_transition?.duration ?? CONFIG_POR_DEFECTO.magicTransitionDuration,
             magicTransitionShake: metadata.magic_transition?.shake ?? CONFIG_POR_DEFECTO.magicTransitionShake,
             magicTransitionParticleBurst: metadata.magic_transition?.particle_burst ?? CONFIG_POR_DEFECTO.magicTransitionParticleBurst,
@@ -348,13 +353,12 @@ async function inicializarVisorColeccion(coleccion, id) {
             // =======================================================
             function crearParticulas(colorHex, mallaLienzo, cantidadOverride = null) {
                 if (!configNFT.particlesEnabled && !cantidadOverride) return;
-                if (!mallaLienzo) return; // Protección por si la malla no existe
+                if (!mallaLienzo) return;
 
                 const cajaLienzo = new THREE.Box3().setFromObject(mallaLienzo);
                 const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
                 const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-                // Usa el conteo base o el override (burst) de la transición mágica
                 const cantidad = cantidadOverride !== null ? cantidadOverride : configNFT.particleCount; 
                 const geometria = new THREE.BufferGeometry();
                 const posiciones = new Float32Array(cantidad * 3);
@@ -412,7 +416,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                 });
             }
             
-            // Función auxiliar para ocular el loader de forma segura
             const loaderContainer = document.getElementById('loader-container');
             function ocultarLoader() {
                 if (loaderContainer) {
@@ -439,12 +442,16 @@ async function inicializarVisorColeccion(coleccion, id) {
                     texturas.push(texturaCarga);
                 }
 
+                // =======================================================
+                // ANIMACIÓN DE ENTRADA INICIAL CON RESPLANDOR POTENCIADO
+                // =======================================================
                 function iniciarEntradaMagica() {
                     const duracionEntrada = 1800; 
                     const inicioEntrada = performance.now();
                     
                     const colorMagia = new THREE.Color(configNFT.emissiveColor);
-                    const fuerzaEntrada = configNFT.bloomStrength > 0 ? configNFT.bloomStrength * 1.5 : 2.5;
+                    // Toma la intensidad exacta configurada para la entrada inicial
+                    const fuerzaEntrada = configNFT.introBloomStrength;
 
                     const material = lienzo.material;
                     const emisionOriginal = material.emissive ? material.emissive.clone() : new THREE.Color(0x000000);
@@ -456,7 +463,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                         const ahora = performance.now();
                         let t = (ahora - inicioEntrada) / duracionEntrada;
 
-                        // Seguro anti-framedrops: Aplicar estados finales estrictos al concluir
                         if (t >= 1) {
                             model.rotation.y = THREE.MathUtils.degToRad(configNFT.rotationY); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
@@ -470,7 +476,8 @@ async function inicializarVisorColeccion(coleccion, id) {
                             }
                             
                             if (!particulasGeneradas) {
-                                crearParticulas(colorMagia, lienzo);
+                                const burst = configNFT.magicTransitionEnabled ? configNFT.magicTransitionParticleBurst : null;
+                                crearParticulas(colorMagia, lienzo, burst);
                                 particulasGeneradas = true;
                             }
                             return; 
@@ -482,7 +489,9 @@ async function inicializarVisorColeccion(coleccion, id) {
                         const curvaLuz = Math.sin(t * Math.PI); 
                         
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
-                        material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
+                        material.emissive.copy(colorMagia);
+                        
+                        // Resplandor potente controlado dinámicamente
                         material.emissiveIntensity = curvaLuz * fuerzaEntrada;
 
                         if (t >= 0.5) {
@@ -493,7 +502,8 @@ async function inicializarVisorColeccion(coleccion, id) {
                             }
 
                             if (!particulasGeneradas) {
-                                crearParticulas(colorMagia, lienzo);
+                                const burst = configNFT.magicTransitionEnabled ? configNFT.magicTransitionParticleBurst : null;
+                                crearParticulas(colorMagia, lienzo, burst);
                                 particulasGeneradas = true;
                             }
                         }
@@ -527,7 +537,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
-                        // Seguro anti-framedrops: Estados finales
                         if (t >= 1) {
                             model.position.copy(posOriginal); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
@@ -549,9 +558,9 @@ async function inicializarVisorColeccion(coleccion, id) {
 
                         const curvaLuz = Math.sin(t * Math.PI);
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
-                        material.emissive.lerpColors(new THREE.Color(0x000000), colorMagia, curvaLuz);
+                        material.emissive.copy(colorMagia);
                         
-                        material.emissiveIntensity = curvaLuz * (configNFT.magicTransitionEnabled ? configNFT.magicTransitionIntensity : configNFT.bloomStrength);
+                        material.emissiveIntensity = curvaLuz * (configNFT.magicTransitionEnabled ? configNFT.magicTransitionBloomStrength : configNFT.bloomStrength);
 
                         if (t < 0.5) {
                             const shakeFactor = configNFT.magicTransitionEnabled ? configNFT.magicTransitionShake : 0.03;
@@ -603,7 +612,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                 ocultarLoader();
                 
             } else {
-                // Si el modelo carga pero no existe el lienzo, al menos quitamos la pantalla de carga para que no se quede congelado
                 ocultarLoader();
             }
         }, 
