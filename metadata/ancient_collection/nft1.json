@@ -37,7 +37,7 @@
   "magic_transition": {
     "enabled": true,
     "intensity": 3.0,
-    "bloom_strength": 1.0,
+    "bloom_strength": 2.0,
     "duration": 1500,
     "shake": 0.03,
     "particle_burst": 20
