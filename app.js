@@ -307,7 +307,7 @@ async function inicializarVisorColeccion(coleccion, id) {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
-                    mat.envMapIntensity = 1.0; 
+                    mat.envMapIntensity = 0.4; 
                     mat.needsUpdate = true;
                 }
             });

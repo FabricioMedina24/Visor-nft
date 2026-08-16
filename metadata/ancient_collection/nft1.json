@@ -18,7 +18,7 @@
     "bloom_threshold": 1.0
   },
   "particles": {
-    "enabled": false,
+    "enabled": true,
     "count": 40,
     "color": "#ffeaba",
     "speed": 1.0,
