@@ -15,7 +15,7 @@
     "ambient_intensity": 0.5,
     "camera_light_intensity": 1.2,
     "bloom_strength": 0.2,
-    "bloom_radius": 0.2,
+    "bloom_radius": 0.9,
     "bloom_threshold": 1.0
   },
 
