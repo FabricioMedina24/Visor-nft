@@ -303,27 +303,11 @@ async function inicializarVisorColeccion(coleccion, id) {
             model.rotation.y = THREE.MathUtils.degToRad(configNFT.rotationY);
             model.position.y += configNFT.offsetY;
 
-            // Identificamos el nodo del lienzo para diferenciarlo del marco
-            const nodoLienzo = model.getObjectByName('LIENZO');
-
             model.traverse((child) => {
                 if (child.isMesh) {
                     const mat = child.material;
                     if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
-
-                    // Comprobamos si esta malla es el lienzo o pertenece a él
-                    const esLienzo = nodoLienzo && (child === nodoLienzo || nodoLienzo.getObjectById(child.id));
-
-                    if (!esLienzo) {
-                        // ES EL MARCO: Le quitamos los reflejos molestos, el brillo y las manchas
-                        mat.envMapIntensity = 0.05; 
-                        if (mat.metalness !== undefined) mat.metalness = 0.1; 
-                        if (mat.roughness !== undefined) mat.roughness = 0.85; 
-                    } else {
-                        // ES EL LIENZO: Mantiene su configuración normal para lucir perfecto
-                        mat.envMapIntensity = 1.0;
-                    }
-
+                    mat.envMapIntensity = 1.0; 
                     mat.needsUpdate = true;
                 }
             });
@@ -395,17 +379,17 @@ async function inicializarVisorColeccion(coleccion, id) {
                 sistemasDeParticulas.push({
                     mesh: mallaParticulas,
                     velocidades: velocidades,
-                    vida: 1.0,          
+                    vida: 1.0,           
                     decaimiento: 0.004 + (Math.random() * 0.003), 
                     semillaAnimacion: Math.random() * 100 
                 });
             }
 
-            const nodoLienzoEnModel = model.getObjectByName('LIENZO');
+            const nodoLienzo = model.getObjectByName('LIENZO');
             let lienzo = null;
 
-            if (nodoLienzoEnModel) {
-                nodoLienzoEnModel.traverse((child) => {
+            if (nodoLienzo) {
+                nodoLienzo.traverse((child) => {
                     if (child.isMesh && child.material) lienzo = child;
                 });
             }
