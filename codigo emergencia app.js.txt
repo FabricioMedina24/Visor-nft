@@ -40,7 +40,6 @@ const CONFIG_POR_DEFECTO = {
     fuerzaBloom: 0.0,       
     colorFondo: 0x0b0b0b,
     backgroundImage: null,
-    mediaFiles: null, // NUEVO: Soporte para nombres de archivo específicos
     
     // Transformaciones
     scale: 1.0,
@@ -65,7 +64,7 @@ const CONFIG_POR_DEFECTO = {
     emissiveColor: 0x000000,
     transitionDuration: 1500,
     introSpinSpeed: 16,
-    introBloomStrength: 8.0, 
+    introBloomStrength: 8.0, // Control de intensidad de la entrada inicial por defecto
 
     // Transición Mágica
     magicTransitionEnabled: true,
@@ -119,9 +118,6 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             cycleInterval: metadata.cycle_interval ?? CONFIG_POR_DEFECTO.cycleInterval,
             backgroundImage: metadata.background_image || `environments/${coleccion}/bg_${id}.png`,
             colorFondo: estilosRareza.colorFondo,
-            
-            // NUEVO: Leemos los archivos de medios (si existen)
-            mediaFiles: metadata.media_files || null,
 
             // Transformaciones
             scale: metadata.transform?.scale ?? CONFIG_POR_DEFECTO.scale,
@@ -146,6 +142,8 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             emissiveColor: colorBaseMagia,
             transitionDuration: metadata.canvas?.transition_duration ?? CONFIG_POR_DEFECTO.transitionDuration,
             introSpinSpeed: metadata.canvas?.intro_spin_speed ?? CONFIG_POR_DEFECTO.introSpinSpeed,
+            
+            // INTRO BLOOM STRENGTH (Lee del JSON o toma el valor de la transición mágica)
             introBloomStrength: metadata.canvas?.intro_bloom_strength ?? magicBloom,
 
             // Transición Mágica
@@ -224,6 +222,7 @@ async function inicializarVisorColeccion(coleccion, id) {
         scene.background = new THREE.Color(configNFT.colorFondo); 
     }
 
+    // Configuración de Cámara dinámicamente según JSON
     const camera = new THREE.PerspectiveCamera(configNFT.cameraFov, window.innerWidth / window.innerHeight, 0.1, 1000);
 
     const renderer = new THREE.WebGLRenderer({ 
@@ -269,6 +268,7 @@ async function inicializarVisorColeccion(coleccion, id) {
     controls.addEventListener('end', resetInactivityTimer);
     startAutoRotation();
 
+    // Postprocesado (Bloom parametrizado)
     const renderScene = new RenderPass(scene, camera);
     const bloomPass = new UnrealBloomPass(
         new THREE.Vector2(window.innerWidth, window.innerHeight), 
@@ -283,6 +283,7 @@ async function inicializarVisorColeccion(coleccion, id) {
     composer.addPass(bloomPass); 
     composer.addPass(outputPass);
 
+    // Entorno de Luces PMREM
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
 
@@ -301,6 +302,7 @@ async function inicializarVisorColeccion(coleccion, id) {
 
     scene.environment = pmremGenerator.fromScene(envScene).texture;
 
+    // Iluminación dinámica desde JSON
     const ambientLight = new THREE.AmbientLight(0xffffff, configNFT.ambientIntensity); 
     scene.add(ambientLight);
 
@@ -317,6 +319,7 @@ async function inicializarVisorColeccion(coleccion, id) {
         function (gltf) {
             const model = gltf.scene;
 
+            // Aplicar transformaciones dinámicas desde metadatos
             model.scale.setScalar(configNFT.scale);
             model.rotation.y = THREE.MathUtils.degToRad(configNFT.rotationY);
             model.position.y += configNFT.offsetY;
@@ -332,6 +335,7 @@ async function inicializarVisorColeccion(coleccion, id) {
 
             scene.add(model);
 
+            // Encuadre de cámara dinámico
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
@@ -344,6 +348,9 @@ async function inicializarVisorColeccion(coleccion, id) {
             camera.lookAt(center);
             controls.update();
 
+            // =======================================================
+            // FUNCIÓN: POLVO MÁGICO / PARTÍCULAS
+            // =======================================================
             function crearParticulas(colorHex, mallaLienzo, cantidadOverride = null) {
                 if (!configNFT.particlesEnabled && !cantidadOverride) return;
                 if (!mallaLienzo) return;
@@ -426,54 +433,24 @@ async function inicializarVisorColeccion(coleccion, id) {
                 const texturas = [];
                 let indiceActual = -1; 
 
-                // =======================================================
-                // NUEVA LÓGICA DE CARGA MIXTA (IMÁGENES Y VIDEOS)
-                // =======================================================
-                
-                // Si el JSON provee un array de archivos (ej. ["1.png", "animacion.mp4"])
-                // Si no, construye el array antiguo ["1.png", "2.png"...] automáticamente
-                let archivosMedia = configNFT.mediaFiles;
-                if (!archivosMedia || archivosMedia.length === 0) {
-                    archivosMedia = [];
-                    for (let i = 1; i <= configNFT.framesCount; i++) {
-                        archivosMedia.push(`${i}.png`);
-                    }
+                for (let i = 1; i <= configNFT.framesCount; i++) {
+                    const url = `paintings/${coleccion}/nft${id}/${i}.png`;
+                    const texturaCarga = textureLoader.load(url, (txt) => {
+                        txt.colorSpace = THREE.SRGBColorSpace;
+                        txt.flipY = false; 
+                    });
+                    texturas.push(texturaCarga);
                 }
 
-                archivosMedia.forEach((archivo) => {
-                    const url = `paintings/${coleccion}/nft${id}/${archivo}`;
-                    const esVideo = archivo.toLowerCase().endsWith('.mp4') || archivo.toLowerCase().endsWith('.webm');
-
-                    if (esVideo) {
-                        // Crear elemento de video HTML dinámico
-                        const video = document.createElement('video');
-                        video.src = url;
-                        video.crossOrigin = 'anonymous';
-                        video.loop = true;
-                        video.muted = true; // Fundamental para que el navegador permita Autoplay
-                        video.playsInline = true;
-                        video.play();
-
-                        // Convertirlo a textura de Three.js
-                        const videoTexture = new THREE.VideoTexture(video);
-                        videoTexture.colorSpace = THREE.SRGBColorSpace;
-                        videoTexture.flipY = false;
-                        texturas.push(videoTexture);
-                    } else {
-                        // Carga de imagen normal
-                        const texturaCarga = textureLoader.load(url, (txt) => {
-                            txt.colorSpace = THREE.SRGBColorSpace;
-                            txt.flipY = false; 
-                        });
-                        texturas.push(texturaCarga);
-                    }
-                });
-
+                // =======================================================
+                // ANIMACIÓN DE ENTRADA INICIAL CON RESPLANDOR POTENCIADO
+                // =======================================================
                 function iniciarEntradaMagica() {
                     const duracionEntrada = 1800; 
                     const inicioEntrada = performance.now();
                     
                     const colorMagia = new THREE.Color(configNFT.emissiveColor);
+                    // Toma la intensidad exacta configurada para la entrada inicial
                     const fuerzaEntrada = configNFT.introBloomStrength;
 
                     const material = lienzo.material;
@@ -514,13 +491,13 @@ async function inicializarVisorColeccion(coleccion, id) {
                         if (!material.emissive) material.emissive = new THREE.Color(0x000000);
                         material.emissive.copy(colorMagia);
                         
+                        // Resplandor potente controlado dinámicamente
                         material.emissiveIntensity = curvaLuz * fuerzaEntrada;
 
                         if (t >= 0.5) {
                             if (texturas.length > 0 && material.map !== texturas[0]) {
                                 material.color.setHex(0xffffff);
                                 material.map = texturas[0];
-                                material.needsUpdate = true;
                                 indiceActual = 0; 
                             }
 
@@ -570,6 +547,12 @@ async function inicializarVisorColeccion(coleccion, id) {
                                 material.map = nuevaTextura;
                                 material.needsUpdate = true;
                             }
+                            
+                            if (!particulasGeneradas) {
+                                const burst = configNFT.magicTransitionEnabled ? configNFT.magicTransitionParticleBurst : null;
+                                crearParticulas(colorMagia, lienzo, burst);
+                                particulasGeneradas = true;
+                            }
                             return;
                         }
 
@@ -611,7 +594,7 @@ async function inicializarVisorColeccion(coleccion, id) {
                     animarResplandor();
                 }
 
-                if (archivosMedia.length > 1 && configNFT.cycleInterval > 0) {
+                if (configNFT.framesCount > 1 && configNFT.cycleInterval > 0) {
                     setInterval(() => {
                         if (texturas.length > 0 && indiceActual !== -1) {
                             let nuevoIndice;

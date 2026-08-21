@@ -1,13 +1,9 @@
 {
   "id": "1",
   "rarity": "Legendary",
-  "frames_count": 1,
+  "frames_count": 5,
   "cycle_interval": 30000,
   "background_image": "environments/bg_4.png",
-
-  "media_files": [
-    "1.mp4"
-  ],
 
   "transform": {
     "scale": 1.0,
