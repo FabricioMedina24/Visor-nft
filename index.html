@@ -75,66 +75,9 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        /* =======================================================
-           MENÚ FLOTANTE DE COLECCIONES (MENÚ DE NAVEGACIÓN)
-           ======================================================= */
-        #nav-menu {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            display: flex;
-            gap: 12px;
-            background: rgba(11, 11, 11, 0.75);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 10px 16px;
-            border-radius: 30px;
-            border: 1px solid rgba(223, 168, 55, 0.3);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        }
-
-        .luxury-select {
-            background: #0b0b0b;
-            color: #dfa837;
-            border: 1px solid rgba(223, 168, 55, 0.5);
-            border-radius: 20px;
-            padding: 6px 14px;
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12px;
-            letter-spacing: 1px;
-            outline: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .luxury-select:hover {
-            border-color: #fff4d0;
-            box-shadow: 0 0 10px rgba(223, 168, 55, 0.4);
-        }
-
-        .luxury-select option {
-            background: #0b0b0b;
-            color: #ffffff;
-        }
     </style>
 </head>
 <body>
-
-    <!-- MENÚ DE NAVEGACIÓN FLOTANTE DE COLECCIONES -->
-    <div id="nav-menu">
-        <select id="collection-select" class="luxury-select">
-            <option value="first_collection">First Collection</option>
-            <option value="ancient_edition">Ancient Edition</option>
-        </select>
-
-        <select id="id-select" class="luxury-select">
-            <option value="1">Objeto #1</option>
-            <option value="2">Objeto #2</option>
-            <option value="3">Objeto #3</option>
-        </select>
-    </div>
 
     <!-- PANTALLA DE CARGA -->
     <div id="loader-container">
@@ -144,32 +87,6 @@
         </div>
         <div class="loading-text">Restoring the Legacy...</div>
     </div>
-
-    <!-- SCRIPT DE CONFIGURACIÓN Y NAVEGACIÓN -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const currentCollection = urlParams.get('collection') || 'first_collection';
-            const currentId = urlParams.get('id') || '1';
-
-            const colSelect = document.getElementById('collection-select');
-            const idSelect = document.getElementById('id-select');
-
-            // Sincronizar el selector con la URL actual
-            if (colSelect) colSelect.value = currentCollection;
-            if (idSelect) idSelect.value = currentId;
-
-            // Función para cambiar de página al seleccionar una colección u objeto
-            function cambiarPagina() {
-                const nuevaColeccion = colSelect.value;
-                const nuevoId = idSelect.value;
-                window.location.href = `?collection=${nuevaColeccion}&id=${nuevoId}`;
-            }
-
-            if (colSelect) colSelect.addEventListener('change', cambiarPagina);
-            if (idSelect) idSelect.addEventListener('change', cambiarPagina);
-        });
-    </script>
 
     <script type="importmap">
       {
