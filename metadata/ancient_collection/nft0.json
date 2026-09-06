@@ -1,9 +1,13 @@
 {
-  "id": "0",
-  "rarity": "Divine",
+  "id": "1",
+  "rarity": "Epic",
   "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_5.png",
+  "background_image": "environments/bg_4.png",
+
+  "media_files": [
+    "1.mp4"
+  ],
 
   "transform": {
     "scale": 1.0,
@@ -13,26 +17,36 @@
 
   "lighting": {
     "ambient_intensity": 0.5,
-    "camera_light_intensity": 1.8,
-    "bloom_strength": 6.0,
-    "bloom_radius": 0.4,
-    "bloom_threshold": 0.85
+    "camera_light_intensity": 1.2,
+    "bloom_strength": 0.2,
+    "bloom_radius": 0.9,
+    "bloom_threshold": 1.0
   },
 
   "particles": {
     "enabled": true,
-    "count": 80,
-    "color": "#ff00ff",
-    "speed": 1.2,
-    "size_factor": 0.0040
+    "count": 10,
+    "color": "#ffeaba",
+    "speed": 1.0,
+    "size_factor": 0.0015
   },
 
   "canvas": {
-    "emissive_color": "#ff00ff",
-    "transition_duration": 1800,
-    "intro_spin_speed": 16
+    "emissive_color": "#ffeaba",
+    "transition_duration": 1500,
+    "intro_spin_speed": 16,
+    "intro_bloom_strength": 8.0
   },
-  
+
+  "magic_transition": {
+    "enabled": true,
+    "intensity": 8.0,
+    "bloom_strength": 3.0,
+    "duration": 1500,
+    "shake": 0.09,
+    "particle_burst": 20
+  },
+
   "camera": {
     "fov": 75,
     "distance_factor": 0.9,
