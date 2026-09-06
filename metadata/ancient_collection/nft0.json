@@ -1,6 +1,6 @@
 {
-  "id": "1",
-  "rarity": "Epic",
+  "id": "0",
+  "rarity": "Divine",
   "frames_count": 1,
   "cycle_interval": 30000,
   "background_image": "environments/bg_4.png",
