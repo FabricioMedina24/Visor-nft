@@ -3,7 +3,7 @@
   "rarity": "Common",
   "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_4.png",
+  "background_image": "environments/bg_1.png",
 
   "media_files": [
     "1.mp4"
