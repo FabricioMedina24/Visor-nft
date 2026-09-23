@@ -26,13 +26,13 @@
   "particles": {
     "enabled": true,
     "count": 10,
-    "color": "#FF00FF",
+    "color": "#7700FF",
     "speed": 1.0,
     "size_factor": 0.0015
   },
 
   "canvas": {
-    "emissive_color": "#FF00FF",
+    "emissive_color": "#7700FF",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
     "intro_bloom_strength": 8.0
