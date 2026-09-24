@@ -1,4 +1,32 @@
---- RAREZAS (BASE) ---
+
+BASE: #ffeaba
+
+COLOR FANTASMA:#00ffff
+COLOR FUEGO: #ffd700
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--- RAREZAS (BASE) ---  
 Divine: #ff00ff
 Legendary: #ffeaba
 Epic: #00ffff
@@ -17,7 +45,7 @@ Dorado Brillante: #ffd700
 Azul Eléctrico puro: #0000ff
 Azul Neón / Cibernético: #1f51ff
 Celeste Hielo / Cian: #00ffff
-Zafiro Profundo: #0f52ba
+Zafiro Profundo: #00ffff
 Azul Agua Marina: #7fffd4
 
 --- VENENO, ÁCIDO Y NATURALEZA ---
@@ -133,3 +161,221 @@ Gris Pizarra: #708090
 Antracita: #293133
 Ónix: #353839
 Negro Ébano: #555D50
+
+
+
+*******************************************************
+
+Rojos a Amarillos (Fuego y Sol)
+
+#FF0000 - Rojo Puro
+
+#FF1100 - Rojo Escarlata Intenso
+
+#FF2200 - Rojo Alarma
+
+#FF3300 - Rojo Lava
+
+#FF4400 - Naranja Vulcano
+
+#FF5500 - Naranja Sangre
+
+#FF6600 - Naranja Fuego
+
+#FF7700 - Naranja Zanahoria Neón
+
+#FF8800 - Naranja Puro
+
+#FF9900 - Naranja Dorado
+
+#FFAA00 - Ámbar Brillante
+
+#FFBB00 - Yema Neón
+
+#FFCC00 - Oro Brillante
+
+#FFDD00 - Amarillo Solar
+
+#FFEE00 - Amarillo Láser
+
+#FFFF00 - Amarillo Puro
+
+Amarillos a Verdes (Ácido y Tóxico)
+
+#EEFF00 - Amarillo Ácido
+
+#DDFF00 - Verde Lima Extremado
+
+#CCFF00 - Lima Eléctrico
+
+#BBFF00 - Chartreuse Brillante
+
+#AAFF00 - Verde Radiactivo Claro
+
+#99FF00 - Verde Manzana Neón
+
+#88FF00 - Verde Voltio
+
+#77FF00 - Verde Pistacho Láser
+
+#66FF00 - Verde Iguana
+
+#55FF00 - Verde Mutante
+
+#44FF00 - Verde Tóxico Intenso
+
+#33FF00 - Verde Esmeralda Ácido
+
+#22FF00 - Verde Matrix Brillante
+
+#11FF00 - Verde Neón Profundo
+
+#00FF00 - Verde Puro
+
+Verdes a Cianos (Menta y Hologramas)
+
+#00FF11 - Verde Láser Puro
+
+#00FF22 - Verde Malaquita Neón
+
+#00FF33 - Verde UFO
+
+#00FF44 - Verde Primavera
+
+#00FF55 - Verde Menta Intenso
+
+#00FF66 - Verde Selva Brillante
+
+#00FF77 - Turquesa Radiactivo
+
+#00FF88 - Esmeralda Cibernético
+
+#00FF99 - Menta Holográfico
+
+#00FFAA - Aguamarina Láser
+
+#00FFBB - Celeste Verdoso
+
+#00FFCC - Cian Claro Neón
+
+#00FFDD - Hielo Tóxico
+
+#00FFEE - Azul Diamante Brillante
+
+#00FFFF - Cian Puro
+
+Cianos a Azules (Hielo y Plasma)
+
+#00EEFF - Cian Hiperluminoso
+
+#00DDFF - Azul Hielo Cortante
+
+#00CCFF - Azul Cielo Neón
+
+#00BBFF - Azul Eléctrico Claro
+
+#00AAFF - Azur Brillante
+
+#0099FF - Azul Mágico
+
+#0088FF - Azul Dodger Neón
+
+#0077FF - Azul Zafiro Láser
+
+#0066FF - Azul Cobalto Radiante
+
+#0055FF - Azul Plasma
+
+#0044FF - Azul Sobrecargado
+
+#0033FF - Azul Océano Profundo
+
+#0022FF - Azul Neón Primario
+
+#0011FF - Azul Abisal Brillante
+
+#0000FF - Azul Puro
+
+Azules a Magentas (Arcano y Galáctico)
+
+#1100FF - Azul Índigo Neón
+
+#2200FF - Azul Violeta Oscuro
+
+#3300FF - Violeta Místico
+
+#4400FF - Púrpura Espacial
+
+#5500FF - Púrpura Eléctrico
+
+#6600FF - Morado Galáctico
+
+#7700FF - Morado Magia Oscura
+
+#8800FF - Ultravioleta Puro
+
+#9900FF - Púrpura Láser
+
+#AA00FF - Orquídea Neón
+
+#BB00FF - Morado Sobrecargado
+
+#CC00FF - Amatista Brillante
+
+#DD00FF - Púrpura Radiactivo
+
+#EE00FF - Magenta Frío
+
+#FF00FF - Magenta Puro
+
+Magentas a Rojos (Cyberpunk y Neón)
+
+#FF00EE - Fucsia Láser
+
+#FF00DD - Rosa Cibernético
+
+#FF00CC - Rosa Plástico
+
+#FF00BB - Rosa Chicle Neón
+
+#FF00AA - Magenta Plasma
+
+#FF0099 - Rosa Fucsia Profundo
+
+#FF0088 - Rosa Caliente
+
+#FF0077 - Rosa Sandía Brillante
+
+#FF0066 - Carmesí Neón
+
+#FF0055 - Rojo Rubí Láser
+
+#FF0044 - Rojo Fresa Eléctrico
+
+#FF0033 - Cereza Neón
+
+#FF0022 - Granate Brillante
+
+#FF0011 - Rojo Sangre Láser
+
+Variaciones Híper-Vibrantes (Alta Saturación Mixta)
+
+#FF3333 - Rojo Coral Brillante
+
+#FF3388 - Sandía Cibernética
+
+#FF33DD - Flamenco Neón
+
+#DD33FF - Violeta Supernova
+
+#8833FF - Índigo de Alta Energía
+
+#3333FF - Azul Real Brillante
+
+#3388FF - Azul Vívido
+
+#33DDFF - Turquesa Eléctrico
+
+#33FF88 - Menta de Alta Intensidad
+
+#88FF33 - Lima Ácido Mixto

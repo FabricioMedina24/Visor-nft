@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Prueba de Hugging Face</title>
+</head>
+<body>
+    <h2>Prueba de Conexión IA</h2>
+    <button onclick="probarIA()">Hacer que el cuadro hable</button>
+    <p id="resultado" style="font-size: 24px; font-weight: bold;"></p>
+
+    <script>
+        // Pega tu token hf_... aquí dentro de las comillas
+        const HF_TOKEN = 'TU_TOKEN_AQUI'; 
+        const URL_MODELO = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
+
+        async function probarIA() {
+            document.getElementById('resultado').innerText = "Pensando...";
+
+            // Este es un prompt de prueba simulando tu Frog Prince
+            const prompt = `<s>[INST] Eres el Frog Prince, un rey maldecido convertido en rana. 
+            Estás atrapado en un cuadro mágico. Un visitante te observa. 
+            Di una sola frase corta (máximo 15 palabras) expresando un lamento. 
+            No uses comillas. [/INST]`;
+
+            try {
+                const respuesta = await fetch(URL_MODELO, {
+                    method: "POST",
+                    headers: { 
+                        "Authorization": `Bearer ${HF_TOKEN}`, 
+                        "Content-Type": "application/json" 
+                    },
+                    body: JSON.stringify({
+                        inputs: prompt,
+                        parameters: { 
+                            max_new_tokens: 30, // Para que la respuesta sea corta
+                            temperature: 0.7    // Creatividad de la respuesta
+                        }
+                    }),
+                });
+
+                const datos = await respuesta.json();
+                
+                // Limpiamos la respuesta para sacar solo lo que la IA generó después del prompt
+                let textoLimpio = datos[0].generated_text.split('[/INST]')[1].trim();
+                
+                document.getElementById('resultado').innerText = textoLimpio;
+                console.log("Éxito:", textoLimpio);
+
+            } catch (error) {
+                document.getElementById('resultado').innerText = "Error en la conexión.";
+                console.error(error);
+            }
+        }
+    </script>
+</body>
+</html>
