@@ -716,7 +716,7 @@ async function escucharAlCuadro(configNFT) {
                         content: `[LOG DEL MOTOR 3D] Renderizado completo. El sensor de cámara detecta un espectador silencioso mirando el lienzo. Emite tu línea de texto ahora.`
                     }
                 ],
-                temperature: 0.9,
+                temperature: 0.6,
                 max_tokens: 150
             }),
         });
@@ -731,7 +731,13 @@ async function escucharAlCuadro(configNFT) {
             return;
         }
 
-        cajaSubtitulos.innerText = datos.choices[0].message.content.trim();
+        let textoIA = datos.choices[0].message.content.trim();
+
+        if (textoIA === "") {
+            textoIA = "... (El ente te observa en un silencio sepulcral) ...";
+        }
+
+        cajaSubtitulos.innerText = textoIA;
 
     } catch (error) {
         console.error("Falla en la IA:", error);
