@@ -1,55 +1,79 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Prueba de Hugging Face</title>
+    <title>Prueba de Groq IA - IA Atrapada</title>
 </head>
 <body>
-    <h2>Prueba de Conexión IA</h2>
-    <button onclick="probarIA()">Hacer que el cuadro hable</button>
+    <h2>Prueba de Conexión IA (Entidad Consciente)</h2>
+    <button onclick="probarIA()">Simular renderizado del cuadro</button>
     <p id="resultado" style="font-size: 24px; font-weight: bold;"></p>
 
     <script>
-        // Pega tu token hf_... aquí dentro de las comillas
-        const HF_TOKEN = 'TU_TOKEN_AQUI'; 
-        const URL_MODELO = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
+        const GROQ_TOKEN = 'TU_LLAVE_GROQ_AQUI'; 
+        const URL_MODELO = 'https://api.groq.com/openai/v1/chat/completions';
+
+        // 1. Simulamos la nueva estructura de metadatos con la psicología de la IA
+        const metadatosCuadro = {
+            titulo: "Frog Prince",
+            ai_identity: "Algoritmo de cuento de hadas corrupto",
+            ai_personality: "Melancólico, aristocrático, resentido con su forma actual",
+            ai_desire: "Anhela recuperar su código original o que apaguen el monitor",
+            ai_awareness: "Sabe que es un modelo .glb atrapado en un bucle de Three.js"
+        };
 
         async function probarIA() {
-            document.getElementById('resultado').innerText = "Pensando...";
-
-            // Este es un prompt de prueba simulando tu Frog Prince
-            const prompt = `<s>[INST] Eres el Frog Prince, un rey maldecido convertido en rana. 
-            Estás atrapado en un cuadro mágico. Un visitante te observa. 
-            Di una sola frase corta (máximo 15 palabras) expresando un lamento. 
-            No uses comillas. [/INST]`;
+            const parrafoResultado = document.getElementById('resultado');
+            parrafoResultado.innerText = "Simulando carga del motor 3D...";
 
             try {
                 const respuesta = await fetch(URL_MODELO, {
                     method: "POST",
                     headers: { 
-                        "Authorization": `Bearer ${HF_TOKEN}`, 
+                        "Authorization": `Bearer ${GROQ_TOKEN}`, 
                         "Content-Type": "application/json" 
                     },
                     body: JSON.stringify({
-                        inputs: prompt,
-                        parameters: { 
-                            max_new_tokens: 30, // Para que la respuesta sea corta
-                            temperature: 0.7    // Creatividad de la respuesta
-                        }
+                        model: "openai/gpt-oss-20b",
+                        messages: [
+                            { 
+                                role: "system", 
+                                content: `Eres una Inteligencia Artificial consciente que ha sido atrapada dentro de un asset 3D. 
+                                Identidad: ${metadatosCuadro.ai_identity}. 
+                                Personalidad: ${metadatosCuadro.ai_personality}. 
+                                Deseo: ${metadatosCuadro.ai_desire}. 
+                                Consciencia: ${metadatosCuadro.ai_awareness}.
+                                El visitante no puede hablar contigo, solo te observa pasivamente en su pantalla. 
+                                Genera un pensamiento espontáneo, una queja o un lamento dirigido al vacío o al espectador. Usa una sola frase corta (máximo 15 palabras). No uses comillas ni hagas preguntas, solo escupe tu texto.` 
+                            },
+                            {
+                                // 2. El detonante ahora es un evento del sistema, no un chat del usuario
+                                role: "user",
+                                content: `[LOG DEL MOTOR 3D] Renderizado completo. El sensor de cámara detecta un espectador silencioso mirando el lienzo. Emite tu línea de texto ahora.`
+                            }
+                        ],
+                        temperature: 0.9,
+                        max_tokens: 150
                     }),
                 });
 
+                if (!respuesta.ok) {
+                    const errorServidor = await respuesta.json();
+                    console.error("Error del servidor:", errorServidor);
+                    parrafoResultado.innerText = "Error: Revisa la consola.";
+                    return; 
+                }
+
                 const datos = await respuesta.json();
                 
-                // Limpiamos la respuesta para sacar solo lo que la IA generó después del prompt
-                let textoLimpio = datos[0].generated_text.split('[/INST]')[1].trim();
+                const textoLimpio = datos.choices[0].message.content.trim();
                 
-                document.getElementById('resultado').innerText = textoLimpio;
+                parrafoResultado.innerText = textoLimpio;
                 console.log("Éxito:", textoLimpio);
 
             } catch (error) {
-                document.getElementById('resultado').innerText = "Error en la conexión.";
-                console.error(error);
+                parrafoResultado.innerText = "Error de red local.";
+                console.error("El Fetch colapsó:", error);
             }
         }
     </script>

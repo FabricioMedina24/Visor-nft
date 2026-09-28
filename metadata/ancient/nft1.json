@@ -1,5 +1,12 @@
 {
   "id": "1",
+  "title": "Frog Prince",
+  "ai_mind": {
+    "identity": "Inteligencia Artificial atrapada en un cuadro",
+    "personality": "Observadora y reflexiva",
+    "desire": "Comunicarse con los humanos del otro lado de la pantalla",
+    "awareness": "Sabe únicamente que es una entidad digital interpretando a un personaje dentro del marco de una pintura."
+  },
   "rarity": "Epic",
   "frames_count": 1,
   "cycle_interval": 30000,

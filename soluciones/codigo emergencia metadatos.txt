@@ -1,9 +1,13 @@
 {
   "id": "1",
-  "rarity": "Legendary",
-  "frames_count": 5,
+  "rarity": "Epic",
+  "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_4.png",
+  "background_image": "environments/bg_3.png",
+
+  "media_files": [
+    "1.mp4"
+  ],
 
   "transform": {
     "scale": 1.0,
@@ -22,13 +26,13 @@
   "particles": {
     "enabled": true,
     "count": 10,
-    "color": "#ffeaba",
+    "color": "#ffd700",
     "speed": 1.0,
     "size_factor": 0.0015
   },
 
   "canvas": {
-    "emissive_color": "#ffeaba",
+    "emissive_color": "#ffd700",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
     "intro_bloom_strength": 8.0

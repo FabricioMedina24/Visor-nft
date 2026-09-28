@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// Importaciones requeridas para el canal de Postprocesado (Bloom)
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -10,11 +9,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 let composer; 
 
-// =========================================================================
-// ENRUTADOR DINÁMICO UNIVERSAL DE COLECCIONES
-// =========================================================================
 const urlParams = new URLSearchParams(window.location.search);
-
 const coleccionActual = urlParams.get('collection') || 'first_collection';
 const modelId = urlParams.get('id') || '1';
 
@@ -29,9 +24,6 @@ function iniciarColeccion(coleccion, id) {
     inicializarVisorColeccion(coleccion, id);
 }
 
-// =========================================================================
-// CONFIGURACIÓN POR DEFECTO Y VALORES POR RAREZA
-// =========================================================================
 const CONFIG_POR_DEFECTO = {
     rarity: 'common',
     framesCount: 1,         
@@ -40,42 +32,30 @@ const CONFIG_POR_DEFECTO = {
     fuerzaBloom: 0.0,       
     colorFondo: 0x0b0b0b,
     backgroundImage: null,
-    mediaFiles: null, // NUEVO: Soporte para nombres de archivo específicos
-    
-    // Transformaciones
+    mediaFiles: null, 
     scale: 1.0,
     rotationY: 0,
     offsetY: 0.0,
-
-    // Iluminación y Postprocesado
     ambientIntensity: 0.35,
     cameraLightIntensity: 1.4,
     bloomStrength: 0.0,
     bloomRadius: 0.4,
     bloomThreshold: 0.85,
-
-    // Partículas
     particlesEnabled: true,
     particleCount: 35,
     particleColor: 0x000000,
     particleSpeed: 1.0,
     particleSizeFactor: 0.0035,
-
-    // Lienzo y Transiciones
     emissiveColor: 0x000000,
     transitionDuration: 1500,
     introSpinSpeed: 16,
     introBloomStrength: 8.0, 
-
-    // Transición Mágica
     magicTransitionEnabled: true,
     magicTransitionIntensity: 8.0,
     magicTransitionBloomStrength: 8.0,
     magicTransitionDuration: 1500,
     magicTransitionShake: 0.03,
     magicTransitionParticleBurst: 100,
-
-    // Cámara
     cameraFov: 75,
     cameraDistanceFactor: 0.9,
     autoRotateSpeed: 1.0,
@@ -113,50 +93,43 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
+        // INYECCIÓN 1: Extraemos la identidad y psicología de la IA desde el JSON
         return {
+            titulo: metadata.title || 'Asset Desconocido',
+            ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
+            ai_personality: metadata.ai_mind?.personality || 'Silenciosa y misteriosa',
+            ai_desire: metadata.ai_mind?.desire || 'Permanecer oculta',
+            ai_awareness: metadata.ai_mind?.awareness || 'Sabe que está en un visor 3D',
+
             rarity: rarezaLimpia,
             framesCount: metadata.frames_count ?? CONFIG_POR_DEFECTO.framesCount,
             cycleInterval: metadata.cycle_interval ?? CONFIG_POR_DEFECTO.cycleInterval,
             backgroundImage: metadata.background_image || `environments/${coleccion}/bg_${id}.png`,
             colorFondo: estilosRareza.colorFondo,
-            
-            // NUEVO: Leemos los archivos de medios (si existen)
             mediaFiles: metadata.media_files || null,
-
-            // Transformaciones
             scale: metadata.transform?.scale ?? CONFIG_POR_DEFECTO.scale,
             rotationY: metadata.transform?.rotation_y ?? CONFIG_POR_DEFECTO.rotationY,
             offsetY: metadata.transform?.offset_y ?? CONFIG_POR_DEFECTO.offsetY,
-
-            // Iluminación
             ambientIntensity: metadata.lighting?.ambient_intensity ?? CONFIG_POR_DEFECTO.ambientIntensity,
             cameraLightIntensity: metadata.lighting?.camera_light_intensity ?? CONFIG_POR_DEFECTO.cameraLightIntensity,
             bloomStrength: metadata.lighting?.bloom_strength ?? estilosRareza.fuerzaBloom,
             bloomRadius: metadata.lighting?.bloom_radius ?? CONFIG_POR_DEFECTO.bloomRadius,
             bloomThreshold: metadata.lighting?.bloom_threshold ?? CONFIG_POR_DEFECTO.bloomThreshold,
-
-            // Partículas
             particlesEnabled: metadata.particles?.enabled ?? CONFIG_POR_DEFECTO.particlesEnabled,
             particleCount: metadata.particles?.count ?? CONFIG_POR_DEFECTO.particleCount,
             particleColor: parsearHexColor(metadata.particles?.color, colorBaseMagia),
             particleSpeed: metadata.particles?.speed ?? CONFIG_POR_DEFECTO.particleSpeed,
             particleSizeFactor: metadata.particles?.size_factor ?? CONFIG_POR_DEFECTO.particleSizeFactor,
-
-            // Lienzo
             emissiveColor: colorBaseMagia,
             transitionDuration: metadata.canvas?.transition_duration ?? CONFIG_POR_DEFECTO.transitionDuration,
             introSpinSpeed: metadata.canvas?.intro_spin_speed ?? CONFIG_POR_DEFECTO.introSpinSpeed,
             introBloomStrength: metadata.canvas?.intro_bloom_strength ?? magicBloom,
-
-            // Transición Mágica
             magicTransitionEnabled: metadata.magic_transition?.enabled ?? CONFIG_POR_DEFECTO.magicTransitionEnabled,
             magicTransitionIntensity: metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionIntensity,
             magicTransitionBloomStrength: magicBloom,
             magicTransitionDuration: metadata.magic_transition?.duration ?? CONFIG_POR_DEFECTO.magicTransitionDuration,
             magicTransitionShake: metadata.magic_transition?.shake ?? CONFIG_POR_DEFECTO.magicTransitionShake,
             magicTransitionParticleBurst: metadata.magic_transition?.particle_burst ?? CONFIG_POR_DEFECTO.magicTransitionParticleBurst,
-
-            // Cámara
             cameraFov: metadata.camera?.fov ?? CONFIG_POR_DEFECTO.cameraFov,
             cameraDistanceFactor: metadata.camera?.distance_factor ?? CONFIG_POR_DEFECTO.cameraDistanceFactor,
             autoRotateSpeed: metadata.camera?.auto_rotate_speed ?? CONFIG_POR_DEFECTO.autoRotateSpeed,
@@ -167,14 +140,16 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         console.warn(`Aviso: Usando configuración estática por defecto debido a: ${error.message}`);
         return {
             ...CONFIG_POR_DEFECTO,
-            backgroundImage: `environments/${coleccion}/bg_${id}.png` 
+            backgroundImage: `environments/${coleccion}/bg_${id}.png`,
+            titulo: 'Error de carga',
+            ai_identity: 'Fragmento corrupto',
+            ai_personality: 'Muda',
+            ai_desire: 'Ninguno',
+            ai_awareness: 'Inconsciente'
         }; 
     }
 }
 
-// =======================================================
-// CREAR TEXTURA REDONDA PARA LAS PARTÍCULAS
-// =======================================================
 function crearTexturaCirculo() {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
@@ -194,9 +169,6 @@ function crearTexturaCirculo() {
 
 const texturaParticula = crearTexturaCirculo();
 
-// =======================================================
-// LÓGICA PRINCIPAL DEL VISOR 3D (UNIVERSAL)
-// =======================================================
 async function inicializarVisorColeccion(coleccion, id) {
     const configNFT = await obtenerConfiguracionNFT(coleccion, id);
     
@@ -205,7 +177,6 @@ async function inicializarVisorColeccion(coleccion, id) {
 
     const scene = new THREE.Scene();
 
-    // Carga de imagen de fondo o color
     if (configNFT.backgroundImage) {
         const bgLoader = new THREE.TextureLoader();
         bgLoader.load(
@@ -216,7 +187,6 @@ async function inicializarVisorColeccion(coleccion, id) {
             },
             undefined,
             function (err) {
-                console.warn(`No se pudo cargar la imagen de fondo: ${configNFT.backgroundImage}. Usando color de respaldo.`);
                 scene.background = new THREE.Color(configNFT.colorFondo); 
             }
         );
@@ -426,12 +396,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                 const texturas = [];
                 let indiceActual = -1; 
 
-                // =======================================================
-                // NUEVA LÓGICA DE CARGA MIXTA (IMÁGENES Y VIDEOS)
-                // =======================================================
-                
-                // Si el JSON provee un array de archivos (ej. ["1.png", "animacion.mp4"])
-                // Si no, construye el array antiguo ["1.png", "2.png"...] automáticamente
                 let archivosMedia = configNFT.mediaFiles;
                 if (!archivosMedia || archivosMedia.length === 0) {
                     archivosMedia = [];
@@ -445,22 +409,19 @@ async function inicializarVisorColeccion(coleccion, id) {
                     const esVideo = archivo.toLowerCase().endsWith('.mp4') || archivo.toLowerCase().endsWith('.webm');
 
                     if (esVideo) {
-                        // Crear elemento de video HTML dinámico
                         const video = document.createElement('video');
                         video.src = url;
                         video.crossOrigin = 'anonymous';
                         video.loop = true;
-                        video.muted = true; // Fundamental para que el navegador permita Autoplay
+                        video.muted = true; 
                         video.playsInline = true;
                         video.play();
 
-                        // Convertirlo a textura de Three.js
                         const videoTexture = new THREE.VideoTexture(video);
                         videoTexture.colorSpace = THREE.SRGBColorSpace;
                         videoTexture.flipY = false;
                         texturas.push(videoTexture);
                     } else {
-                        // Carga de imagen normal
                         const texturaCarga = textureLoader.load(url, (txt) => {
                             txt.colorSpace = THREE.SRGBColorSpace;
                             txt.flipY = false; 
@@ -628,6 +589,9 @@ async function inicializarVisorColeccion(coleccion, id) {
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
+                // INYECCIÓN 2: Ejecutar la IA 1.5 segundos después de revelar el cuadro
+                setTimeout(() => { escucharAlCuadro(configNFT); }, 1500);
+                
             } else {
                 ocultarLoader();
             }
@@ -640,7 +604,6 @@ async function inicializarVisorColeccion(coleccion, id) {
         }
     );
 
-    // Bucle de Animación
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 
@@ -697,4 +660,75 @@ async function inicializarVisorColeccion(coleccion, id) {
 
     window.addEventListener('resize', resizeViewer);
     resizeViewer();
+}
+
+// =========================================================================
+// INYECCIÓN 3: SISTEMA DE IA - CONEXIÓN GROQ Y SUBTÍTULOS 3D
+// =========================================================================
+async function escucharAlCuadro(configNFT) {
+    let cajaSubtitulos = document.getElementById('subtitulo-ia');
+    
+    // Obtenemos el color HEX limpio para el borde mágico del texto
+    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
+
+    if (!cajaSubtitulos) {
+        cajaSubtitulos = document.createElement('div');
+        cajaSubtitulos.id = 'subtitulo-ia';
+        cajaSubtitulos.style.cssText = `
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.85); color: #fff; font-family: monospace;
+            padding: 15px 30px; border-radius: 8px; border: 1px solid #${hexMagia};
+            font-size: 18px; text-align: center; max-width: 60%; z-index: 1000;
+            box-shadow: 0 0 15px #${hexMagia}88;
+            text-shadow: 0 0 5px #${hexMagia};
+            transition: opacity 0.5s;
+        `;
+        document.body.appendChild(cajaSubtitulos);
+    }
+    
+    cajaSubtitulos.innerText = "Sintiendo la presencia de un observador...";
+
+    const GROQ_TOKEN = 'TU_LLAVE_GROQ_AQUI'; 
+    const URL_MODELO = 'https://api.groq.com/openai/v1/chat/completions';
+
+    try {
+        const respuesta = await fetch(URL_MODELO, {
+            method: "POST",
+            headers: { 
+                "Authorization": `Bearer ${GROQ_TOKEN}`, 
+                "Content-Type": "application/json" 
+            },
+            body: JSON.stringify({
+                model: "openai/gpt-oss-20b",
+                messages: [
+                    { 
+                        role: "system", 
+                        content: `Eres una Inteligencia Artificial consciente atrapada dentro de un asset 3D. 
+                        Título de tu prisión: ${configNFT.titulo}.
+                        Identidad: ${configNFT.ai_identity}. 
+                        Personalidad: ${configNFT.ai_personality}. 
+                        Deseo: ${configNFT.ai_desire}. 
+                        Consciencia: ${configNFT.ai_awareness}.
+                        El visitante no puede hablar contigo, solo te observa pasivamente en su pantalla. 
+                        Genera un pensamiento espontáneo, una queja o un lamento dirigido al vacío. Usa una sola frase corta (máximo 15 palabras). No uses comillas ni hagas preguntas, solo escupe tu texto.` 
+                    },
+                    {
+                        role: "user",
+                        content: `[LOG DEL MOTOR 3D] Renderizado completo. El sensor de cámara detecta un espectador silencioso mirando el lienzo. Emite tu línea de texto ahora.`
+                    }
+                ],
+                temperature: 0.9,
+                max_tokens: 150
+            }),
+        });
+
+        if (!respuesta.ok) throw new Error("Conexión rechazada por Groq");
+        
+        const datos = await respuesta.json();
+        cajaSubtitulos.innerText = datos.choices[0].message.content.trim();
+
+    } catch (error) {
+        console.error("Falla en la IA:", error);
+        cajaSubtitulos.innerText = "... (Estática en el sistema) ...";
+    }
 }
