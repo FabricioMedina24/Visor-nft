@@ -689,7 +689,7 @@ async function escucharAlCuadro(configNFT) {
     
     cajaSubtitulos.innerText = "Sintiendo la presencia de un observador...";
 
-    const URL_PUENTE = 'https://puente-ia-galeria.fabriciomedina1000.workers.dev/'; 
+    const URL_PUENTE = 'https://puente-ia-galeria.fabriciomedina1000.workers.dev'; 
 
     try {
         const respuesta = await fetch(URL_PUENTE, {
