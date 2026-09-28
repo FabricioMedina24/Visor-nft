@@ -689,7 +689,7 @@ async function escucharAlCuadro(configNFT) {
     
     cajaSubtitulos.innerText = "Sintiendo la presencia de un observador...";
 
-    const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev/'; 
+    const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
 
     try {
         const respuesta = await fetch(URL_PUENTE, {
@@ -724,6 +724,13 @@ async function escucharAlCuadro(configNFT) {
         if (!respuesta.ok) throw new Error("Conexión rechazada por el puente");
         
         const datos = await respuesta.json();
+
+        if (datos.error) {
+            console.error("Groq rechazó la petición por este motivo:", datos.error);
+            cajaSubtitulos.innerText = "... (Falla de consciencia: Revisa la consola) ...";
+            return;
+        }
+
         cajaSubtitulos.innerText = datos.choices[0].message.content.trim();
 
     } catch (error) {
