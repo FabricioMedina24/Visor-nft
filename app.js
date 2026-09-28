@@ -663,7 +663,7 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// INYECCIÓN 3: SISTEMA DE IA - CONEXIÓN GROQ Y SUBTÍTULOS 3D
+// INYECCIÓN 3: SISTEMA DE IA - CONEXIÓN CLOUDFLARE Y SUBTÍTULOS 3D
 // =========================================================================
 async function escucharAlCuadro(configNFT) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
@@ -688,14 +688,12 @@ async function escucharAlCuadro(configNFT) {
     
     cajaSubtitulos.innerText = "Sintiendo la presencia de un observador...";
 
-    const GROQ_TOKEN = 'TU_LLAVE_GROQ_AQUI'; 
-    const URL_MODELO = 'https://api.groq.com/openai/v1/chat/completions';
+    const URL_PUENTE = 'https://puente-ia-galeria.fabriciomedina1000.workers.dev/'; 
 
     try {
-        const respuesta = await fetch(URL_MODELO, {
+        const respuesta = await fetch(URL_PUENTE, {
             method: "POST",
             headers: { 
-                "Authorization": `Bearer ${GROQ_TOKEN}`, 
                 "Content-Type": "application/json" 
             },
             body: JSON.stringify({
@@ -722,7 +720,7 @@ async function escucharAlCuadro(configNFT) {
             }),
         });
 
-        if (!respuesta.ok) throw new Error("Conexión rechazada por Groq");
+        if (!respuesta.ok) throw new Error("Conexión rechazada por el puente");
         
         const datos = await respuesta.json();
         cajaSubtitulos.innerText = datos.choices[0].message.content.trim();
