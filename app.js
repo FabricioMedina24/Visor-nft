@@ -698,7 +698,7 @@ async function escucharAlCuadro(configNFT) {
                 "Content-Type": "application/json" 
             },
             body: JSON.stringify({
-                model: "openai/gpt-oss-20b",
+                model: "openai/gpt-oss-120b",
                 messages: [
                     { 
                         role: "system", 
