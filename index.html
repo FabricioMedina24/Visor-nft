@@ -2,12 +2,20 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Ajuste: user-scalable=no evita que la pantalla haga zoom accidentalmente al rotar el modelo 3D en móviles -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Visor NFT 3D Premium</title>
     
     <link rel="stylesheet" href="./style.css">
 
     <style>
+        /* Ajuste: Elimina márgenes por defecto y bloquea el scroll para que el canvas de Three.js encaje perfecto */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0b0b0b;
+        }
+
         /* Pantalla de fondo fija elegante */
         #loader-container {
             position: fixed;
@@ -85,6 +93,7 @@
             <div class="spinner"></div>
             <div class="inner-ring"></div>
         </div>
+        <!-- Esta clase "loading-text" se conecta perfectamente con app.js para mostrar mensajes de error si el modelo falla -->
         <div class="loading-text">Restoring the Legacy...</div>
     </div>
 

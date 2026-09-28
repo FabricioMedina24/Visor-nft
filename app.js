@@ -10,7 +10,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 let composer; 
 
 const urlParams = new URLSearchParams(window.location.search);
-const coleccionActual = urlParams.get('collection') || 'first_collection';
+// Cambio aplicado: ahora busca 'ancient' por defecto
+const coleccionActual = urlParams.get('collection') || 'ancient';
 const modelId = urlParams.get('id') || '1';
 
 requestAnimationFrame(() => {
