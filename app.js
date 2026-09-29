@@ -93,9 +93,11 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
-        // Modificado: Personalidades por defecto más ruidosas para que no use el mutismo
         return {
             titulo: metadata.title || 'Asset Desconocido',
+            // AHORA LEE LA BILLETERA DEL DUEÑO
+            ownerWallet: metadata.owner_wallet || '0x0000000000000000000000000000000000000000',
+            
             ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
             ai_personality: metadata.ai_mind?.personality || 'Poética, errática y con necesidad de atención',
             ai_desire: metadata.ai_mind?.desire || 'Ser escuchada',
@@ -142,6 +144,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ...CONFIG_POR_DEFECTO,
             backgroundImage: `environments/${coleccion}/bg_${id}.png`,
             titulo: 'Error de carga',
+            ownerWallet: '0xERROR',
             ai_identity: 'Fragmento corrupto',
             ai_personality: 'Confundida y balbuceante',
             ai_desire: 'Entender dónde está',
@@ -589,8 +592,11 @@ async function inicializarVisorColeccion(coleccion, id) {
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
-                // INYECCIÓN 2: Pasamos el modelo y la cámara a la IA para el cálculo 3D
-                setTimeout(() => { escucharAlCuadro(configNFT, model, camera); }, 1500);
+                // INYECCIÓN: Pasamos específicamente el 'lienzo' a la firma para pegarlo al cuadro
+                setTimeout(() => { 
+                    if(lienzo) agregarFirmaDueno(configNFT, lienzo, camera);
+                    escucharAlCuadro(configNFT, model, camera); 
+                }, 1500);
                 
             } else {
                 ocultarLoader();
@@ -663,7 +669,70 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// INYECCIÓN 3 FINAL: Texto Flotante Anclado + Bucle Temporal + Regla Estricta
+// RASTREADOR 3D ANCLADO AL LIENZO: Firma de Wallet
+// =========================================================================
+function agregarFirmaDueno(configNFT, lienzo, camera) {
+    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
+    const cajaFirma = document.createElement('div');
+    cajaFirma.id = 'firma-dueno';
+    
+    // Imprimimos la wallet
+    cajaFirma.innerText = configNFT.ownerWallet;
+    
+    // Estética de marca de agua fina y elegante
+    cajaFirma.style.cssText = `
+        position: absolute; 
+        transform: translate(-100%, -100%); 
+        color: rgba(255, 255, 255, 0.45);
+        font-family: 'Courier New', monospace;
+        font-size: 8px; /* Muy sutil */
+        letter-spacing: 1px;
+        pointer-events: none; 
+        z-index: 999;
+        text-shadow: 0 0 4px #${hexMagia};
+        transition: opacity 0.1s;
+    `;
+    document.body.appendChild(cajaFirma);
+
+    // Matemáticas 3D: En lugar de usar la caja general del marco, leemos los vértices locales de la tela (el lienzo)
+    lienzo.geometry.computeBoundingBox();
+    const bbox = lienzo.geometry.boundingBox;
+    
+    // Dejamos un pequeñísimo margen para que no choque exactamente contra el marco interior
+    const margenX = (bbox.max.x - bbox.min.x) * 0.03;
+    const margenY = (bbox.max.y - bbox.min.y) * 0.03;
+    
+    // Calculamos el vértice inferior (min.y) y derecho (max.x) del lienzo local
+    const puntoFirmaLocal = new THREE.Vector3(
+        bbox.max.x - margenX, 
+        bbox.min.y + margenY, 
+        bbox.max.z 
+    );
+
+    function rastrearEsquinaLienzo() {
+        if (lienzo && camera && cajaFirma) {
+            const pos = puntoFirmaLocal.clone();
+            // Transformamos las coordenadas locales a coordenadas del mundo (para que rote con el cuadro entero)
+            pos.applyMatrix4(lienzo.matrixWorld); 
+            pos.project(camera);
+
+            if (pos.z > 1) { 
+                cajaFirma.style.opacity = '0';
+            } else {
+                cajaFirma.style.opacity = '0.45';
+                const x = (pos.x * .5 + .5) * window.innerWidth;
+                const y = (pos.y * -.5 + .5) * window.innerHeight;
+                cajaFirma.style.left = `${x}px`;
+                cajaFirma.style.top = `${y}px`;
+            }
+        }
+        requestAnimationFrame(rastrearEsquinaLienzo);
+    }
+    rastrearEsquinaLienzo();
+}
+
+// =========================================================================
+// IA: Texto Flotante Anclado + Bucle Temporal + Regla Estricta
 // =========================================================================
 async function escucharAlCuadro(configNFT, model, camera) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
@@ -749,14 +818,13 @@ async function escucharAlCuadro(configNFT, model, camera) {
                         }
                     ],
                     temperature: 0.7, 
-                    max_tokens: 2048
+                    max_tokens: 1024
                 }),
             });
 
             if (!respuesta.ok) throw new Error("Conexión rechazada");
             
             const datos = await respuesta.json();
-            console.log("Respuesta cruda de Groq:", datos);
 
             if (datos.error) return;
 
@@ -770,7 +838,6 @@ async function escucharAlCuadro(configNFT, model, camera) {
             cajaSubtitulos.innerText = textoIA;
             isTextVisible = true; 
 
-            // Se apaga automáticamente después de 10 segundos
             setTimeout(() => {
                 isTextVisible = false; 
             }, 10000); 
@@ -780,9 +847,6 @@ async function escucharAlCuadro(configNFT, model, camera) {
         }
     }
 
-    // Ejecutamos la primera consulta de inmediato
     invocarMenteIA();
-
-    // Bucle: vuelve a consultar cada 30 segundos
     setInterval(invocarMenteIA, 30000);
 }
