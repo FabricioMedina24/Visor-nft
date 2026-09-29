@@ -662,12 +662,14 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// INYECCIÓN 3 MODIFICADA: Texto Flotante Anclado en 3D (Tamaño fijo y reducido)
+// INYECCIÓN 3 FINAL: Texto Flotante Anclado + Ciclo de 30 Segundos
 // =========================================================================
 async function escucharAlCuadro(configNFT, model, camera) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
-    
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
+
+    // Variable clave para controlar cuándo se ve el texto y cuándo se oculta
+    let isTextVisible = false;
 
     if (!cajaSubtitulos) {
         cajaSubtitulos = document.createElement('div');
@@ -678,7 +680,7 @@ async function escucharAlCuadro(configNFT, model, camera) {
             transform: translate(-50%, -50%); 
             color: #ffffff; 
             font-family: 'Times New Roman', serif;
-            font-size: 14px; 
+            font-size: 10px; 
             font-style: italic;
             letter-spacing: 1px;
             text-align: center; 
@@ -687,12 +689,13 @@ async function escucharAlCuadro(configNFT, model, camera) {
             z-index: 1000;
             pointer-events: none; 
             text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
-            transition: opacity 0.3s ease-out;
+            transition: opacity 0.5s ease-out; /* Transición suave */
+            opacity: 0; /* Inicia oculto */
         `;
         document.body.appendChild(cajaSubtitulos);
     }
 
-    // Tracker 3D: Proyecta la posición del modelo a la pantalla 2D
+    // Tracker 3D interactivo
     function rastrearModelo() {
         if (model && camera && cajaSubtitulos) {
             const box = new THREE.Box3().setFromObject(model);
@@ -707,7 +710,8 @@ async function escucharAlCuadro(configNFT, model, camera) {
             
             pos.project(camera);
 
-            if (pos.z > 1) { 
+            // Si el objeto se voltea, o si el ciclo manda a ocultar el texto, lo apagamos
+            if (pos.z > 1 || !isTextVisible) { 
                 cajaSubtitulos.style.opacity = '0';
             } else {
                 cajaSubtitulos.style.opacity = '1';
@@ -722,59 +726,65 @@ async function escucharAlCuadro(configNFT, model, camera) {
     
     rastrearModelo();
 
-    cajaSubtitulos.innerText = "Sintiendo la presencia de un observador...";
-
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
 
-    try {
-        const respuesta = await fetch(URL_PUENTE, {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json" 
-            },
-            body: JSON.stringify({
-                model: "openai/gpt-oss-120b", 
-                messages: [
-                    { 
-                        role: "system", 
-                        content: `Eres una entidad atrapada en un cuadro. 
-                        Identidad: ${configNFT.ai_identity}. Personalidad: ${configNFT.ai_personality}. 
-                        El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido al vacío. Sé breve (máximo 15 palabras).` 
-                    },
-                    {
-                        role: "user",
-                        content: `Un espectador te mira. Di tu línea de texto ahora.`
-                    }
-                ],
-                temperature: 0.7, 
-                max_tokens: 150
-            }),
-        });
+    // Función que envuelve la petición a Groq
+    async function invocarMenteIA() {
+        try {
+            const respuesta = await fetch(URL_PUENTE, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json" 
+                },
+                body: JSON.stringify({
+                    model: "openai/gpt-oss-120b", 
+                    messages: [
+                        { 
+                            role: "system", 
+                            content: `Eres una entidad atrapada en un cuadro. 
+                            Identidad: ${configNFT.ai_identity}. Personalidad: ${configNFT.ai_personality}. 
+                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido al vacío. Sé breve (máximo 15 palabras).` 
+                        },
+                        {
+                            role: "user",
+                            content: `Un espectador te mira. Di tu línea de texto ahora.`
+                        }
+                    ],
+                    temperature: 0.7, 
+                    max_tokens: 150
+                }),
+            });
 
-        if (!respuesta.ok) throw new Error("Conexión rechazada por el puente");
-        
-        const datos = await respuesta.json();
-        
-        console.log("Respuesta cruda de Groq:", datos);
+            if (!respuesta.ok) throw new Error("Conexión rechazada");
+            
+            const datos = await respuesta.json();
+            console.log("Respuesta cruda de Groq:", datos);
 
-        if (datos.error) {
-            console.error("Groq rechazó la petición por este motivo:", datos.error);
-            cajaSubtitulos.innerText = "... (Falla de consciencia: Revisa la consola) ...";
-            return;
+            if (datos.error) return;
+
+            let textoIA = datos.choices[0].message.content.trim();
+            textoIA = textoIA.replace(/^["']|["']$/g, '');
+
+            if (textoIA === "") {
+                textoIA = "... (El ente te observa en un silencio sepulcral) ...";
+            }
+
+            cajaSubtitulos.innerText = textoIA;
+            isTextVisible = true; // Mostrar el texto brillante
+
+            // Se apaga automáticamente después de 10 segundos
+            setTimeout(() => {
+                isTextVisible = false; 
+            }, 10000); 
+
+        } catch (error) {
+            console.error("Falla en la IA:", error);
         }
-
-        let textoIA = datos.choices[0].message.content.trim();
-
-        textoIA = textoIA.replace(/^["']|["']$/g, '');
-
-        if (textoIA === "") {
-            textoIA = "El ente te observa en un silencio sepulcral";
-        }
-
-        cajaSubtitulos.innerText = textoIA;
-
-    } catch (error) {
-        console.error("Falla en la IA:", error);
-        cajaSubtitulos.innerText = "... (Estática en el sistema) ...";
     }
+
+    // Ejecutamos la primera consulta de inmediato
+    invocarMenteIA();
+
+    // Iniciamos el bucle: vuelve a consultar cada 30 segundos
+    setInterval(invocarMenteIA, 30000);
 }
