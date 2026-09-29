@@ -711,7 +711,7 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - PEGADÍSIMA Y EN EJE CORRECTO
+// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - ESTILO FIRMA DIAGONAL
 // =========================================================================
 function agregarFirmaDueno3D(configNFT, lienzo, model) {
     if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
@@ -726,7 +726,7 @@ function agregarFirmaDueno3D(configNFT, lienzo, model) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.fillStyle = '#FFD700';
-    ctx.font = 'bold 60px "Courier New", monospace';
+    ctx.font = 'italic 55px "Brush Script MT", "Lucida Handwriting", cursive';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
@@ -756,18 +756,23 @@ function agregarFirmaDueno3D(configNFT, lienzo, model) {
     
     mallaFirma.renderOrder = 999; 
 
+    // ROTACIÓN DIAGONAL (15 grados hacia arriba)
+    mallaFirma.rotation.z = THREE.MathUtils.degToRad(15);
+
     // CAJA ALINEADA AL EJE MUNDIAL IGUAL QUE LAS PARTÍCULAS
     const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
     const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
     const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-    const altoFirma = tamanoLienzo.y * 0.06; 
+    // TAMAÑO MÁS PEQUEÑO (2.5% del alto del cuadro)
+    const altoFirma = tamanoLienzo.y * 0.025; 
     const anchoFirma = altoFirma * aspectRatio;
     
     mallaFirma.scale.set(anchoFirma, altoFirma, 1);
 
-    const margenX = tamanoLienzo.x * 0.02;
-    const margenY = tamanoLienzo.y * 0.02;
+    // Márgenes para compensar la inclinación
+    const margenX = tamanoLienzo.x * 0.035;
+    const margenY = tamanoLienzo.y * 0.035;
     
     // CÁLCULO SÚPER PEGADO:
     // tamanoLienzo.z es el grosor total de la tela en 3D. 
