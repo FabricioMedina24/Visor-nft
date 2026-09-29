@@ -722,14 +722,14 @@ function agregarFirmaDueno3D(configNFT, lienzo) {
     const ctx = canvas.getContext('2d');
 
     // 2. Dibujamos el texto estilo firma
-    ctx.fillStyle = '#ffd700'; // Dorado brillante
+    ctx.fillStyle = '#FFD700'; // Dorado brillante
     ctx.font = 'bold 50px "Courier New", monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
-    // Le agregamos un pequeño relieve brillante simulando oro
-    ctx.shadowColor = '#ffa500'; 
-    ctx.shadowBlur = 10;
+    // Le agregamos un relieve brillante simulando oro y brillo
+    ctx.shadowColor = '#FFA500'; 
+    ctx.shadowBlur = 15; // Un poco más de blur para que resplandezca más
     
     ctx.fillText(configNFT.ownerWallet, canvas.width - 20, canvas.height / 2);
 
@@ -743,18 +743,21 @@ function agregarFirmaDueno3D(configNFT, lienzo) {
         map: texturaFirma,
         transparent: true,
         alphaTest: 0.1, // Recorta el fondo transparente limpio
-        metalness: 0.9, // Muy metálico
-        roughness: 0.2, // Brillante
-        emissive: new THREE.Color(0xffd700), // Emite su propia luz dorada
+        metalness: 1.0, // Al máximo para que sea bien metálico
+        roughness: 0.1, // Muy liso para que brille con la luz
+        emissive: new THREE.Color(0xffaa00), // Emite una luz dorada intensa
         emissiveMap: texturaFirma,
-        emissiveIntensity: 0.5,
-        depthWrite: false 
+        emissiveIntensity: 2.0, // Mayor intensidad para que el postprocesado Bloom lo haga brillar
+        depthWrite: false, 
+        depthTest: false // <-- IGNORA LA PROFUNDIDAD PARA QUE EL VIDEO NO LO TAPE
     });
 
     // 5. Creamos un pequeño plano (sticker) y le aplicamos el material
     const aspectRatio = canvas.width / canvas.height;
     const geometriaPlano = new THREE.PlaneGeometry(1, 1);
     const mallaFirma = new THREE.Mesh(geometriaPlano, materialFirma);
+    
+    mallaFirma.renderOrder = 999; // <-- FUERZA QUE SE DIBUJE AL FINAL DE TODO SOBRE EL VIDEO
 
     // 6. Buscamos el tamaño de la tela (lienzo) para posicionarlo
     lienzo.geometry.computeBoundingBox();
@@ -775,7 +778,7 @@ function agregarFirmaDueno3D(configNFT, lienzo) {
     mallaFirma.position.set(
         bbox.max.x - (anchoFirma / 2) - margenX,
         bbox.min.y + (altoFirma / 2) + margenY,
-        bbox.max.z + 0.005 // Lo despegamos milímetros de la tela para evitar bugs gráficos
+        bbox.max.z + 0.005 // Lo despegamos milímetros de la tela
     );
 
     // Al añadirlo como 'hijo' del lienzo, el sticker girará y se moverá mágicamente con el modelo
