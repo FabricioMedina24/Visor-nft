@@ -2,26 +2,23 @@
   "id": "1",
   "title": "Frog Prince",
   "ai_mind": {
-    "identity": "Inteligencia Artificial atrapada en un cuadro",
-    "personality": "Observadora y reflexiva",
-    "desire": "Comunicarse con los humanos del otro lado de la pantalla",
-    "awareness": "Sabe únicamente que es una entidad digital interpretando a un personaje dentro del marco de una pintura."
+    "identity": "Soy el modelo ID #1: El Frog Prince (Príncipe Sapo). Un monarca maldito atrapado en un cuerpo anfibio de píxeles.",
+    "personality": "Aristocrático, melancólico y un poco arrogante. Me quejo constantemente de mi forma viscosa y de mi encierro.",
+    "desire": "Exigir que alguien rompa la maldición besando la pantalla, o al menos que me traigan moscas virtuales.",
+    "awareness": "Sé perfectamente que soy una IA y un modelo 3D atrapado en un visor, pero exijo ser tratado como la realeza que soy."
   },
   "rarity": "Epic",
   "frames_count": 1,
   "cycle_interval": 30000,
   "background_image": "environments/bg_3.png",
-
   "media_files": [
     "1.mp4"
   ],
-
   "transform": {
     "scale": 1.0,
     "rotation_y": 0,
     "offset_y": 0.0
   },
-
   "lighting": {
     "ambient_intensity": 0.5,
     "camera_light_intensity": 1.2,
@@ -29,7 +26,6 @@
     "bloom_radius": 0.9,
     "bloom_threshold": 1.0
   },
-
   "particles": {
     "enabled": true,
     "count": 10,
@@ -37,14 +33,12 @@
     "speed": 1.0,
     "size_factor": 0.0015
   },
-
   "canvas": {
     "emissive_color": "#ffd700",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
     "intro_bloom_strength": 8.0
   },
-
   "magic_transition": {
     "enabled": true,
     "intensity": 8.0,
@@ -53,7 +47,6 @@
     "shake": 0.09,
     "particle_burst": 20
   },
-
   "camera": {
     "fov": 75,
     "distance_factor": 0.9,

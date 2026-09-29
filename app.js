@@ -680,7 +680,7 @@ async function escucharAlCuadro(configNFT, model, camera) {
             transform: translate(-50%, -50%); 
             color: #ffffff; 
             font-family: 'Times New Roman', serif;
-            font-size: 14px; 
+            font-size: 12px; 
             font-style: italic;
             letter-spacing: 1px;
             text-align: center; 
