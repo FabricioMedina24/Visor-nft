@@ -662,7 +662,7 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// INYECCIÓN 3 MODIFICADA: Texto Flotante Anclado en 3D
+// INYECCIÓN 3 MODIFICADA: Texto Flotante Anclado en 3D (Tamaño fijo y reducido)
 // =========================================================================
 async function escucharAlCuadro(configNFT, model, camera) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
@@ -673,43 +673,41 @@ async function escucharAlCuadro(configNFT, model, camera) {
         cajaSubtitulos = document.createElement('div');
         cajaSubtitulos.id = 'subtitulo-ia';
         
-        // CSS Modificado: Eliminamos el fondo "canvas" y hacemos que el texto sea flotante e interactivo con la sombra
         cajaSubtitulos.style.cssText = `
             position: absolute; 
             transform: translate(-50%, -50%); 
             color: #ffffff; 
             font-family: 'Times New Roman', serif;
-            font-size: 22px; 
+            font-size: 14px; 
             font-style: italic;
+            letter-spacing: 1px;
             text-align: center; 
             width: max-content;
             max-width: 80%; 
             z-index: 1000;
-            pointer-events: none; /* Crucial: para poder seguir moviendo la cámara 3D pasando el mouse sobre el texto */
-            text-shadow: 0 0 10px #${hexMagia}, 0 0 20px #${hexMagia}, 2px 2px 5px rgba(0,0,0,1);
+            pointer-events: none; 
+            text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
             transition: opacity 0.3s ease-out;
         `;
         document.body.appendChild(cajaSubtitulos);
     }
 
-    // Tracker 3D: Esta función calcula en cada frame dónde está la base del cuadro y mueve las letras allí
+    // Tracker 3D: Proyecta la posición del modelo a la pantalla 2D
     function rastrearModelo() {
         if (model && camera && cajaSubtitulos) {
             const box = new THREE.Box3().setFromObject(model);
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
             
-            // Calculamos un punto en el espacio 3D justo debajo del cuadro
             const pos = new THREE.Vector3(
                 center.x, 
-                center.y - (size.y / 2) - (size.y * 0.15), 
+                center.y - (size.y / 2) - (size.y * 0.10), 
                 center.z
             );
             
-            // Lo proyectamos a la cámara 2D
             pos.project(camera);
 
-            if (pos.z > 1) { // Si el objeto queda rotado detrás de la cámara, ocultamos el texto
+            if (pos.z > 1) { 
                 cajaSubtitulos.style.opacity = '0';
             } else {
                 cajaSubtitulos.style.opacity = '1';
@@ -722,7 +720,6 @@ async function escucharAlCuadro(configNFT, model, camera) {
         requestAnimationFrame(rastrearModelo);
     }
     
-    // Iniciamos el rastreador de movimiento
     rastrearModelo();
 
     cajaSubtitulos.innerText = "Sintiendo la presencia de un observador...";
@@ -758,7 +755,6 @@ async function escucharAlCuadro(configNFT, model, camera) {
         
         const datos = await respuesta.json();
         
-        // Seguimos espiando la respuesta en consola por si la IA sigue enviando texto en blanco
         console.log("Respuesta cruda de Groq:", datos);
 
         if (datos.error) {
@@ -772,7 +768,7 @@ async function escucharAlCuadro(configNFT, model, camera) {
         textoIA = textoIA.replace(/^["']|["']$/g, '');
 
         if (textoIA === "") {
-            textoIA = "... (El ente te observa en un silencio sepulcral) ...";
+            textoIA = "El ente te observa en un silencio sepulcral";
         }
 
         cajaSubtitulos.innerText = textoIA;
