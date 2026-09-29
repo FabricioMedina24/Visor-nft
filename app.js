@@ -749,7 +749,7 @@ async function escucharAlCuadro(configNFT, model, camera) {
                         }
                     ],
                     temperature: 0.7, 
-                    max_tokens: 150
+                    max_tokens: 2048
                 }),
             });
 
