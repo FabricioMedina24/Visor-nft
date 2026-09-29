@@ -93,11 +93,12 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
+        // Modificado: Personalidades por defecto más ruidosas para que no use el mutismo
         return {
             titulo: metadata.title || 'Asset Desconocido',
             ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
-            ai_personality: metadata.ai_mind?.personality || 'Silenciosa y misteriosa',
-            ai_desire: metadata.ai_mind?.desire || 'Permanecer oculta',
+            ai_personality: metadata.ai_mind?.personality || 'Poética, errática y con necesidad de atención',
+            ai_desire: metadata.ai_mind?.desire || 'Ser escuchada',
             ai_awareness: metadata.ai_mind?.awareness || 'Sabe que está en un visor 3D',
 
             rarity: rarezaLimpia,
@@ -142,9 +143,9 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             backgroundImage: `environments/${coleccion}/bg_${id}.png`,
             titulo: 'Error de carga',
             ai_identity: 'Fragmento corrupto',
-            ai_personality: 'Muda',
-            ai_desire: 'Ninguno',
-            ai_awareness: 'Inconsciente'
+            ai_personality: 'Confundida y balbuceante',
+            ai_desire: 'Entender dónde está',
+            ai_awareness: 'Desorientada'
         }; 
     }
 }
@@ -588,7 +589,7 @@ async function inicializarVisorColeccion(coleccion, id) {
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
-                // INYECCIÓN 2 MODIFICADA: Pasamos el modelo y la cámara a la IA para el cálculo 3D
+                // INYECCIÓN 2: Pasamos el modelo y la cámara a la IA para el cálculo 3D
                 setTimeout(() => { escucharAlCuadro(configNFT, model, camera); }, 1500);
                 
             } else {
@@ -662,13 +663,12 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// INYECCIÓN 3 FINAL: Texto Flotante Anclado + Ciclo de 30 Segundos
+// INYECCIÓN 3 FINAL: Texto Flotante Anclado + Bucle Temporal + Regla Estricta
 // =========================================================================
 async function escucharAlCuadro(configNFT, model, camera) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
 
-    // Variable clave para controlar cuándo se ve el texto y cuándo se oculta
     let isTextVisible = false;
 
     if (!cajaSubtitulos) {
@@ -680,7 +680,7 @@ async function escucharAlCuadro(configNFT, model, camera) {
             transform: translate(-50%, -50%); 
             color: #ffffff; 
             font-family: 'Times New Roman', serif;
-            font-size: 10px; 
+            font-size: 14px; 
             font-style: italic;
             letter-spacing: 1px;
             text-align: center; 
@@ -689,13 +689,12 @@ async function escucharAlCuadro(configNFT, model, camera) {
             z-index: 1000;
             pointer-events: none; 
             text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
-            transition: opacity 0.5s ease-out; /* Transición suave */
-            opacity: 0; /* Inicia oculto */
+            transition: opacity 0.5s ease-out;
+            opacity: 0;
         `;
         document.body.appendChild(cajaSubtitulos);
     }
 
-    // Tracker 3D interactivo
     function rastrearModelo() {
         if (model && camera && cajaSubtitulos) {
             const box = new THREE.Box3().setFromObject(model);
@@ -710,7 +709,6 @@ async function escucharAlCuadro(configNFT, model, camera) {
             
             pos.project(camera);
 
-            // Si el objeto se voltea, o si el ciclo manda a ocultar el texto, lo apagamos
             if (pos.z > 1 || !isTextVisible) { 
                 cajaSubtitulos.style.opacity = '0';
             } else {
@@ -728,7 +726,6 @@ async function escucharAlCuadro(configNFT, model, camera) {
 
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
 
-    // Función que envuelve la petición a Groq
     async function invocarMenteIA() {
         try {
             const respuesta = await fetch(URL_PUENTE, {
@@ -743,7 +740,8 @@ async function escucharAlCuadro(configNFT, model, camera) {
                             role: "system", 
                             content: `Eres una entidad atrapada en un cuadro. 
                             Identidad: ${configNFT.ai_identity}. Personalidad: ${configNFT.ai_personality}. 
-                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido al vacío. Sé breve (máximo 15 palabras).` 
+                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido al vacío. 
+                            REGLA ESTRICTA: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 15 palabras).` 
                         },
                         {
                             role: "user",
@@ -770,7 +768,7 @@ async function escucharAlCuadro(configNFT, model, camera) {
             }
 
             cajaSubtitulos.innerText = textoIA;
-            isTextVisible = true; // Mostrar el texto brillante
+            isTextVisible = true; 
 
             // Se apaga automáticamente después de 10 segundos
             setTimeout(() => {
@@ -785,6 +783,6 @@ async function escucharAlCuadro(configNFT, model, camera) {
     // Ejecutamos la primera consulta de inmediato
     invocarMenteIA();
 
-    // Iniciamos el bucle: vuelve a consultar cada 30 segundos
+    // Bucle: vuelve a consultar cada 30 segundos
     setInterval(invocarMenteIA, 30000);
 }
