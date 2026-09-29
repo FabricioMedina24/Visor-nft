@@ -10,7 +10,6 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 let composer; 
 
 const urlParams = new URLSearchParams(window.location.search);
-// Cambio aplicado: ahora busca 'ancient' por defecto
 const coleccionActual = urlParams.get('collection') || 'ancient';
 const modelId = urlParams.get('id') || '1';
 
@@ -94,7 +93,6 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
-        // INYECCIÓN 1: Extraemos la identidad y psicología de la IA desde el JSON
         return {
             titulo: metadata.title || 'Asset Desconocido',
             ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
@@ -590,8 +588,8 @@ async function inicializarVisorColeccion(coleccion, id) {
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
-                // INYECCIÓN 2: Ejecutar la IA 1.5 segundos después de revelar el cuadro
-                setTimeout(() => { escucharAlCuadro(configNFT); }, 1500);
+                // INYECCIÓN 2 MODIFICADA: Pasamos el modelo y la cámara a la IA para el cálculo 3D
+                setTimeout(() => { escucharAlCuadro(configNFT, model, camera); }, 1500);
                 
             } else {
                 ocultarLoader();
@@ -664,29 +662,69 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// INYECCIÓN 3: SISTEMA DE IA - CONEXIÓN CLOUDFLARE Y SUBTÍTULOS 3D
+// INYECCIÓN 3 MODIFICADA: Texto Flotante Anclado en 3D
 // =========================================================================
-async function escucharAlCuadro(configNFT) {
+async function escucharAlCuadro(configNFT, model, camera) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
     
-    // Obtenemos el color HEX limpio para el borde mágico del texto
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
 
     if (!cajaSubtitulos) {
         cajaSubtitulos = document.createElement('div');
         cajaSubtitulos.id = 'subtitulo-ia';
+        
+        // CSS Modificado: Eliminamos el fondo "canvas" y hacemos que el texto sea flotante e interactivo con la sombra
         cajaSubtitulos.style.cssText = `
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.85); color: #fff; font-family: monospace;
-            padding: 15px 30px; border-radius: 8px; border: 1px solid #${hexMagia};
-            font-size: 18px; text-align: center; max-width: 60%; z-index: 1000;
-            box-shadow: 0 0 15px #${hexMagia}88;
-            text-shadow: 0 0 5px #${hexMagia};
-            transition: opacity 0.5s;
+            position: absolute; 
+            transform: translate(-50%, -50%); 
+            color: #ffffff; 
+            font-family: 'Times New Roman', serif;
+            font-size: 22px; 
+            font-style: italic;
+            text-align: center; 
+            width: max-content;
+            max-width: 80%; 
+            z-index: 1000;
+            pointer-events: none; /* Crucial: para poder seguir moviendo la cámara 3D pasando el mouse sobre el texto */
+            text-shadow: 0 0 10px #${hexMagia}, 0 0 20px #${hexMagia}, 2px 2px 5px rgba(0,0,0,1);
+            transition: opacity 0.3s ease-out;
         `;
         document.body.appendChild(cajaSubtitulos);
     }
+
+    // Tracker 3D: Esta función calcula en cada frame dónde está la base del cuadro y mueve las letras allí
+    function rastrearModelo() {
+        if (model && camera && cajaSubtitulos) {
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            
+            // Calculamos un punto en el espacio 3D justo debajo del cuadro
+            const pos = new THREE.Vector3(
+                center.x, 
+                center.y - (size.y / 2) - (size.y * 0.15), 
+                center.z
+            );
+            
+            // Lo proyectamos a la cámara 2D
+            pos.project(camera);
+
+            if (pos.z > 1) { // Si el objeto queda rotado detrás de la cámara, ocultamos el texto
+                cajaSubtitulos.style.opacity = '0';
+            } else {
+                cajaSubtitulos.style.opacity = '1';
+                const x = (pos.x * .5 + .5) * window.innerWidth;
+                const y = (pos.y * -.5 + .5) * window.innerHeight;
+                cajaSubtitulos.style.left = `${x}px`;
+                cajaSubtitulos.style.top = `${y}px`;
+            }
+        }
+        requestAnimationFrame(rastrearModelo);
+    }
     
+    // Iniciamos el rastreador de movimiento
+    rastrearModelo();
+
     cajaSubtitulos.innerText = "Sintiendo la presencia de un observador...";
 
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
@@ -698,25 +736,20 @@ async function escucharAlCuadro(configNFT) {
                 "Content-Type": "application/json" 
             },
             body: JSON.stringify({
-                model: "openai/gpt-oss-120b",
+                model: "openai/gpt-oss-120b", 
                 messages: [
                     { 
                         role: "system", 
-                        content: `Eres una Inteligencia Artificial consciente atrapada dentro de un asset 3D. 
-                        Título de tu prisión: ${configNFT.titulo}.
-                        Identidad: ${configNFT.ai_identity}. 
-                        Personalidad: ${configNFT.ai_personality}. 
-                        Deseo: ${configNFT.ai_desire}. 
-                        Consciencia: ${configNFT.ai_awareness}.
-                        El visitante no puede hablar contigo, solo te observa pasivamente en su pantalla. 
-                        Genera un pensamiento espontáneo, una queja o un lamento dirigido al vacío. Usa una sola frase corta (máximo 15 palabras). No uses comillas ni hagas preguntas, solo escupe tu texto.` 
+                        content: `Eres una entidad atrapada en un cuadro. 
+                        Identidad: ${configNFT.ai_identity}. Personalidad: ${configNFT.ai_personality}. 
+                        El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido al vacío. Sé breve (máximo 15 palabras).` 
                     },
                     {
                         role: "user",
-                        content: `[LOG DEL MOTOR 3D] Renderizado completo. El sensor de cámara detecta un espectador silencioso mirando el lienzo. Emite tu línea de texto ahora.`
+                        content: `Un espectador te mira. Di tu línea de texto ahora.`
                     }
                 ],
-                temperature: 0.6,
+                temperature: 0.7, 
                 max_tokens: 150
             }),
         });
@@ -724,6 +757,9 @@ async function escucharAlCuadro(configNFT) {
         if (!respuesta.ok) throw new Error("Conexión rechazada por el puente");
         
         const datos = await respuesta.json();
+        
+        // Seguimos espiando la respuesta en consola por si la IA sigue enviando texto en blanco
+        console.log("Respuesta cruda de Groq:", datos);
 
         if (datos.error) {
             console.error("Groq rechazó la petición por este motivo:", datos.error);
@@ -732,6 +768,8 @@ async function escucharAlCuadro(configNFT) {
         }
 
         let textoIA = datos.choices[0].message.content.trim();
+
+        textoIA = textoIA.replace(/^["']|["']$/g, '');
 
         if (textoIA === "") {
             textoIA = "... (El ente te observa en un silencio sepulcral) ...";
