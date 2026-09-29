@@ -757,7 +757,7 @@ function agregarFirmaDueno3D(configNFT, lienzo, model) {
     mallaFirma.renderOrder = 999; 
 
     // ROTACIÓN DIAGONAL (15 grados hacia arriba)
-    mallaFirma.rotation.z = THREE.MathUtils.degToRad(15);
+    mallaFirma.rotation.z = THREE.MathUtils.degToRad(35);
 
     // CAJA ALINEADA AL EJE MUNDIAL IGUAL QUE LAS PARTÍCULAS
     const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
