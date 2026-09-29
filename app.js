@@ -633,7 +633,8 @@ async function inicializarVisorColeccion(coleccion, id) {
                 ocultarLoader();
                 
                 setTimeout(() => { 
-                    if(lienzo) agregarFirmaDueno3D(configNFT, lienzo);
+                    // AQUÍ PASAMOS EL 'model' a la función de la firma
+                    if(lienzo) agregarFirmaDueno3D(configNFT, lienzo, model);
                     escucharAlCuadro(configNFT, model, camera); 
                 }, 1500);
                 
@@ -708,24 +709,21 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - VERSIÓN INFALIBLE
+// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - MATCH CON PARTÍCULAS
 // =========================================================================
-function agregarFirmaDueno3D(configNFT, lienzo) {
+function agregarFirmaDueno3D(configNFT, lienzo, model) {
     if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
         return; 
     }
 
-    // 1. Creamos un canvas virtual de alta resolución
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
 
-    // Limpiamos el fondo por seguridad (transparente)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Dibujamos el texto
-    ctx.fillStyle = '#FFD700'; // Dorado puro
+    ctx.fillStyle = '#FFD700';
     ctx.font = 'bold 60px "Courier New", monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -735,20 +733,16 @@ function agregarFirmaDueno3D(configNFT, lienzo) {
     
     ctx.fillText(configNFT.ownerWallet, canvas.width - 20, canvas.height / 2);
 
-    // 3. Textura
     const texturaFirma = new THREE.CanvasTexture(canvas);
     texturaFirma.colorSpace = THREE.SRGBColorSpace;
     texturaFirma.anisotropy = 16; 
 
-    // 4. Usamos MeshBasicMaterial para asegurar que NO dependa de luces y siempre se vea
     const materialFirma = new THREE.MeshBasicMaterial({
         map: texturaFirma,
         transparent: true,
         alphaTest: 0.05, 
-        // Multiplicamos el color para que tu BloomPass lo detecte como luz brillante
         color: new THREE.Color(0xffaa00).multiplyScalar(2.0), 
         depthWrite: false, 
-        // TRUCO CLAVE: Empuja el material hacia la cámara para evitar que el video lo trague
         polygonOffset: true,
         polygonOffsetFactor: -10, 
         polygonOffsetUnits: -10
@@ -760,33 +754,28 @@ function agregarFirmaDueno3D(configNFT, lienzo) {
     
     mallaFirma.renderOrder = 999; 
 
-    // 5. Posicionamiento dinámico seguro
-    lienzo.geometry.computeBoundingBox();
-    const bbox = lienzo.geometry.boundingBox;
-    
-    // Usamos Math.abs por si el modelo está exportado con ejes invertidos
-    const widthLienzo = Math.abs(bbox.max.x - bbox.min.x);
-    const heightLienzo = Math.abs(bbox.max.y - bbox.min.y);
+    // CLONAMOS LA LÓGICA DE POSICIÓN EXACTA DE LAS PARTÍCULAS
+    const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
+    const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
+    const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-    // Aumenté el tamaño a 6% temporalmente para asegurar que lo puedas ver
-    const altoFirma = heightLienzo * 0.06; 
+    const altoFirma = tamanoLienzo.y * 0.06; 
     const anchoFirma = altoFirma * aspectRatio;
     
     mallaFirma.scale.set(anchoFirma, altoFirma, 1);
 
-    const margenX = widthLienzo * 0.02;
-    const margenY = heightLienzo * 0.02;
+    const margenX = tamanoLienzo.x * 0.02;
+    const margenY = tamanoLienzo.y * 0.02;
     
-    // Separación Z dinámica basada en el tamaño del cuadro (asegura que salga del lienzo)
-    const separacionZ = Math.max((bbox.max.z - bbox.min.z) * 0.1, 0.05);
-
+    // POSICIONAMOS EN EL EJE Z DE LAS PARTÍCULAS (Mismo sistema coordenado que mallaParticulas)
     mallaFirma.position.set(
-        bbox.max.x - (anchoFirma / 2) - margenX,
-        bbox.min.y + (altoFirma / 2) + margenY,
-        bbox.max.z + separacionZ 
+        centroLienzo.x + (tamanoLienzo.x / 2) - (anchoFirma / 2) - margenX, // Abajo a la derecha (X)
+        centroLienzo.y - (tamanoLienzo.y / 2) + (altoFirma / 2) + margenY, // Abajo a la derecha (Y)
+        centroLienzo.z + 0.02 // Eje Z exacto desde donde salen eyectadas
     );
 
-    lienzo.add(mallaFirma);
+    // AGREGAMOS AL 'model', que es donde también viven las partículas.
+    model.add(mallaFirma);
 }
 
 
