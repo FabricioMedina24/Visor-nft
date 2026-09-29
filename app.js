@@ -708,82 +708,87 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo)
+// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - VERSIÓN INFALIBLE
 // =========================================================================
 function agregarFirmaDueno3D(configNFT, lienzo) {
     if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
         return; 
     }
 
-    // 1. Creamos un canvas virtual de alta resolución para pintar la firma dorada
+    // 1. Creamos un canvas virtual de alta resolución
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
 
-    // 2. Dibujamos el texto estilo firma
-    ctx.fillStyle = '#FFD700'; // Dorado brillante
-    ctx.font = 'bold 50px "Courier New", monospace';
+    // Limpiamos el fondo por seguridad (transparente)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 2. Dibujamos el texto
+    ctx.fillStyle = '#FFD700'; // Dorado puro
+    ctx.font = 'bold 60px "Courier New", monospace';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     
-    // Le agregamos un relieve brillante simulando oro y brillo
     ctx.shadowColor = '#FFA500'; 
-    ctx.shadowBlur = 15; // Un poco más de blur para que resplandezca más
+    ctx.shadowBlur = 10;
     
     ctx.fillText(configNFT.ownerWallet, canvas.width - 20, canvas.height / 2);
 
-    // 3. Convertimos el dibujo en una textura 3D
+    // 3. Textura
     const texturaFirma = new THREE.CanvasTexture(canvas);
     texturaFirma.colorSpace = THREE.SRGBColorSpace;
     texturaFirma.anisotropy = 16; 
 
-    // 4. Creamos un material estándar para que interactúe con la luz 3D
-    const materialFirma = new THREE.MeshStandardMaterial({
+    // 4. Usamos MeshBasicMaterial para asegurar que NO dependa de luces y siempre se vea
+    const materialFirma = new THREE.MeshBasicMaterial({
         map: texturaFirma,
         transparent: true,
-        alphaTest: 0.1, // Recorta el fondo transparente limpio
-        metalness: 1.0, // Al máximo para que sea bien metálico
-        roughness: 0.1, // Muy liso para que brille con la luz
-        emissive: new THREE.Color(0xffaa00), // Emite una luz dorada intensa
-        emissiveMap: texturaFirma,
-        emissiveIntensity: 2.0, // Mayor intensidad para que el postprocesado Bloom lo haga brillar
+        alphaTest: 0.05, 
+        // Multiplicamos el color para que tu BloomPass lo detecte como luz brillante
+        color: new THREE.Color(0xffaa00).multiplyScalar(2.0), 
         depthWrite: false, 
-        depthTest: false // <-- IGNORA LA PROFUNDIDAD PARA QUE EL VIDEO NO LO TAPE
+        // TRUCO CLAVE: Empuja el material hacia la cámara para evitar que el video lo trague
+        polygonOffset: true,
+        polygonOffsetFactor: -10, 
+        polygonOffsetUnits: -10
     });
 
-    // 5. Creamos un pequeño plano (sticker) y le aplicamos el material
     const aspectRatio = canvas.width / canvas.height;
     const geometriaPlano = new THREE.PlaneGeometry(1, 1);
     const mallaFirma = new THREE.Mesh(geometriaPlano, materialFirma);
     
-    mallaFirma.renderOrder = 999; // <-- FUERZA QUE SE DIBUJE AL FINAL DE TODO SOBRE EL VIDEO
+    mallaFirma.renderOrder = 999; 
 
-    // 6. Buscamos el tamaño de la tela (lienzo) para posicionarlo
+    // 5. Posicionamiento dinámico seguro
     lienzo.geometry.computeBoundingBox();
     const bbox = lienzo.geometry.boundingBox;
-    const widthLienzo = bbox.max.x - bbox.min.x;
-    const heightLienzo = bbox.max.y - bbox.min.y;
+    
+    // Usamos Math.abs por si el modelo está exportado con ejes invertidos
+    const widthLienzo = Math.abs(bbox.max.x - bbox.min.x);
+    const heightLienzo = Math.abs(bbox.max.y - bbox.min.y);
 
-    // Ajustamos el tamaño del sticker al 4% del alto del cuadro
-    const altoFirma = heightLienzo * 0.04; 
+    // Aumenté el tamaño a 6% temporalmente para asegurar que lo puedas ver
+    const altoFirma = heightLienzo * 0.06; 
     const anchoFirma = altoFirma * aspectRatio;
     
     mallaFirma.scale.set(anchoFirma, altoFirma, 1);
 
-    // 7. Lo pegamos exactamente en la esquina inferior derecha local del lienzo
     const margenX = widthLienzo * 0.02;
     const margenY = heightLienzo * 0.02;
     
+    // Separación Z dinámica basada en el tamaño del cuadro (asegura que salga del lienzo)
+    const separacionZ = Math.max((bbox.max.z - bbox.min.z) * 0.1, 0.05);
+
     mallaFirma.position.set(
         bbox.max.x - (anchoFirma / 2) - margenX,
         bbox.min.y + (altoFirma / 2) + margenY,
-        bbox.max.z + 0.005 // Lo despegamos milímetros de la tela
+        bbox.max.z + separacionZ 
     );
 
-    // Al añadirlo como 'hijo' del lienzo, el sticker girará y se moverá mágicamente con el modelo
     lienzo.add(mallaFirma);
 }
+
 
 // =========================================================================
 // IA: Texto Flotante Anclado + Bucle Temporal + Regla Estricta
