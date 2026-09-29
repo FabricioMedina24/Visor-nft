@@ -80,6 +80,42 @@ function parsearHexColor(color, fallback) {
     return fallback;
 }
 
+async function obtenerDuenoDeBlockchain(contractAddress, tokenId) {
+    const RPC_URL = 'https://polygon-rpc.com'; 
+
+    if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
+        return 'Contrato no especificado';
+    }
+
+    try {
+        const funcionHash = '0x6352211e';
+        const tokenHex = parseInt(tokenId).toString(16).padStart(64, '0');
+        const dataPayload = funcionHash + tokenHex;
+
+        const respuesta = await fetch(RPC_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'eth_call',
+                params: [{ to: contractAddress, data: dataPayload }, 'latest'],
+                id: 1
+            })
+        });
+        
+        const json = await respuesta.json();
+        
+        if (json.result && json.result !== '0x') {
+            const walletReal = '0x' + json.result.slice(-40);
+            return walletReal;
+        }
+        return 'Wallet no encontrada';
+    } catch (e) {
+        console.error("Fallo al contactar la blockchain:", e);
+        return 'Sin conexión Web3';
+    }
+}
+
 async function obtenerConfiguracionNFT(coleccion, id) {
     try {
         const urlMetadatos = `metadata/${coleccion}/nft${id}.json`; 
@@ -93,10 +129,13 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
+        const direccionContrato = metadata.contract_address || '0x0000000000000000000000000000000000000000';
+        const duenoAutomatico = await obtenerDuenoDeBlockchain(direccionContrato, id);
+
         return {
             titulo: metadata.title || 'Asset Desconocido',
-            // AHORA LEE LA BILLETERA DEL DUEÑO
-            ownerWallet: metadata.owner_wallet || '0x0000000000000000000000000000000000000000',
+            contractAddress: direccionContrato,
+            ownerWallet: duenoAutomatico, 
             
             ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
             ai_personality: metadata.ai_mind?.personality || 'Poética, errática y con necesidad de atención',
@@ -144,7 +183,8 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ...CONFIG_POR_DEFECTO,
             backgroundImage: `environments/${coleccion}/bg_${id}.png`,
             titulo: 'Error de carga',
-            ownerWallet: '0xERROR',
+            contractAddress: '0xERROR',
+            ownerWallet: 'Desconocido',
             ai_identity: 'Fragmento corrupto',
             ai_personality: 'Confundida y balbuceante',
             ai_desire: 'Entender dónde está',
@@ -592,9 +632,8 @@ async function inicializarVisorColeccion(coleccion, id) {
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
-                // INYECCIÓN: Pasamos específicamente el 'lienzo' a la firma para pegarlo al cuadro
                 setTimeout(() => { 
-                    if(lienzo) agregarFirmaDueno(configNFT, lienzo, camera);
+                    if(lienzo) agregarFirmaDueno3D(configNFT, lienzo);
                     escucharAlCuadro(configNFT, model, camera); 
                 }, 1500);
                 
@@ -669,66 +708,78 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// RASTREADOR 3D ANCLADO AL LIENZO: Firma de Wallet
+// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo)
 // =========================================================================
-function agregarFirmaDueno(configNFT, lienzo, camera) {
-    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
-    const cajaFirma = document.createElement('div');
-    cajaFirma.id = 'firma-dueno';
-    
-    // Imprimimos la wallet
-    cajaFirma.innerText = configNFT.ownerWallet;
-    
-    // Estética de marca de agua fina y elegante
-    cajaFirma.style.cssText = `
-        position: absolute; 
-        transform: translate(-100%, -100%); 
-        color: rgba(255, 255, 255, 0.45);
-        font-family: 'Courier New', monospace;
-        font-size: 8px; /* Muy sutil */
-        letter-spacing: 1px;
-        pointer-events: none; 
-        z-index: 999;
-        text-shadow: 0 0 4px #${hexMagia};
-        transition: opacity 0.1s;
-    `;
-    document.body.appendChild(cajaFirma);
+function agregarFirmaDueno3D(configNFT, lienzo) {
+    if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
+        return; 
+    }
 
-    // Matemáticas 3D: En lugar de usar la caja general del marco, leemos los vértices locales de la tela (el lienzo)
+    // 1. Creamos un canvas virtual de alta resolución para pintar la firma dorada
+    const canvas = document.createElement('canvas');
+    canvas.width = 1024;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    // 2. Dibujamos el texto estilo firma
+    ctx.fillStyle = '#ffd700'; // Dorado brillante
+    ctx.font = 'bold 50px "Courier New", monospace';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    
+    // Le agregamos un pequeño relieve brillante simulando oro
+    ctx.shadowColor = '#ffa500'; 
+    ctx.shadowBlur = 10;
+    
+    ctx.fillText(configNFT.ownerWallet, canvas.width - 20, canvas.height / 2);
+
+    // 3. Convertimos el dibujo en una textura 3D
+    const texturaFirma = new THREE.CanvasTexture(canvas);
+    texturaFirma.colorSpace = THREE.SRGBColorSpace;
+    texturaFirma.anisotropy = 16; 
+
+    // 4. Creamos un material estándar para que interactúe con la luz 3D
+    const materialFirma = new THREE.MeshStandardMaterial({
+        map: texturaFirma,
+        transparent: true,
+        alphaTest: 0.1, // Recorta el fondo transparente limpio
+        metalness: 0.9, // Muy metálico
+        roughness: 0.2, // Brillante
+        emissive: new THREE.Color(0xffd700), // Emite su propia luz dorada
+        emissiveMap: texturaFirma,
+        emissiveIntensity: 0.5,
+        depthWrite: false 
+    });
+
+    // 5. Creamos un pequeño plano (sticker) y le aplicamos el material
+    const aspectRatio = canvas.width / canvas.height;
+    const geometriaPlano = new THREE.PlaneGeometry(1, 1);
+    const mallaFirma = new THREE.Mesh(geometriaPlano, materialFirma);
+
+    // 6. Buscamos el tamaño de la tela (lienzo) para posicionarlo
     lienzo.geometry.computeBoundingBox();
     const bbox = lienzo.geometry.boundingBox;
+    const widthLienzo = bbox.max.x - bbox.min.x;
+    const heightLienzo = bbox.max.y - bbox.min.y;
+
+    // Ajustamos el tamaño del sticker al 4% del alto del cuadro
+    const altoFirma = heightLienzo * 0.04; 
+    const anchoFirma = altoFirma * aspectRatio;
     
-    // Dejamos un pequeñísimo margen para que no choque exactamente contra el marco interior
-    const margenX = (bbox.max.x - bbox.min.x) * 0.03;
-    const margenY = (bbox.max.y - bbox.min.y) * 0.03;
+    mallaFirma.scale.set(anchoFirma, altoFirma, 1);
+
+    // 7. Lo pegamos exactamente en la esquina inferior derecha local del lienzo
+    const margenX = widthLienzo * 0.02;
+    const margenY = heightLienzo * 0.02;
     
-    // Calculamos el vértice inferior (min.y) y derecho (max.x) del lienzo local
-    const puntoFirmaLocal = new THREE.Vector3(
-        bbox.max.x - margenX, 
-        bbox.min.y + margenY, 
-        bbox.max.z 
+    mallaFirma.position.set(
+        bbox.max.x - (anchoFirma / 2) - margenX,
+        bbox.min.y + (altoFirma / 2) + margenY,
+        bbox.max.z + 0.005 // Lo despegamos milímetros de la tela para evitar bugs gráficos
     );
 
-    function rastrearEsquinaLienzo() {
-        if (lienzo && camera && cajaFirma) {
-            const pos = puntoFirmaLocal.clone();
-            // Transformamos las coordenadas locales a coordenadas del mundo (para que rote con el cuadro entero)
-            pos.applyMatrix4(lienzo.matrixWorld); 
-            pos.project(camera);
-
-            if (pos.z > 1) { 
-                cajaFirma.style.opacity = '0';
-            } else {
-                cajaFirma.style.opacity = '0.45';
-                const x = (pos.x * .5 + .5) * window.innerWidth;
-                const y = (pos.y * -.5 + .5) * window.innerHeight;
-                cajaFirma.style.left = `${x}px`;
-                cajaFirma.style.top = `${y}px`;
-            }
-        }
-        requestAnimationFrame(rastrearEsquinaLienzo);
-    }
-    rastrearEsquinaLienzo();
+    // Al añadirlo como 'hijo' del lienzo, el sticker girará y se moverá mágicamente con el modelo
+    lienzo.add(mallaFirma);
 }
 
 // =========================================================================
