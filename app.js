@@ -629,12 +629,14 @@ async function inicializarVisorColeccion(coleccion, id) {
                     }, configNFT.cycleInterval);
                 }
 
+                // TRUCO CLAVE: Calculamos y añadimos la firma ANTES de que el cuadro empiece a rotar.
+                // Así la "Box3" mundial captura las coordenadas frontales exactas.
+                if(lienzo) agregarFirmaDueno3D(configNFT, lienzo, model);
+
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
                 setTimeout(() => { 
-                    // AQUÍ PASAMOS EL 'model' a la función de la firma
-                    if(lienzo) agregarFirmaDueno3D(configNFT, lienzo, model);
                     escucharAlCuadro(configNFT, model, camera); 
                 }, 1500);
                 
@@ -709,7 +711,7 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - MATCH CON PARTÍCULAS
+// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - PEGADÍSIMA Y EN EJE CORRECTO
 // =========================================================================
 function agregarFirmaDueno3D(configNFT, lienzo, model) {
     if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
@@ -754,7 +756,7 @@ function agregarFirmaDueno3D(configNFT, lienzo, model) {
     
     mallaFirma.renderOrder = 999; 
 
-    // CLONAMOS LA LÓGICA DE POSICIÓN EXACTA DE LAS PARTÍCULAS
+    // CAJA ALINEADA AL EJE MUNDIAL IGUAL QUE LAS PARTÍCULAS
     const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
     const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
     const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
@@ -767,14 +769,17 @@ function agregarFirmaDueno3D(configNFT, lienzo, model) {
     const margenX = tamanoLienzo.x * 0.02;
     const margenY = tamanoLienzo.y * 0.02;
     
-    // POSICIONAMOS EN EL EJE Z DE LAS PARTÍCULAS (Mismo sistema coordenado que mallaParticulas)
+    // CÁLCULO SÚPER PEGADO:
+    // tamanoLienzo.z es el grosor total de la tela en 3D. 
+    // Le sumamos la mitad de su grosor al centro exacto y le damos un desfase de sólo 0.001 mm.
+    const zFrontalExacto = centroLienzo.z + (tamanoLienzo.z / 2) + 0.001;
+
     mallaFirma.position.set(
-        centroLienzo.x + (tamanoLienzo.x / 2) - (anchoFirma / 2) - margenX, // Abajo a la derecha (X)
-        centroLienzo.y - (tamanoLienzo.y / 2) + (altoFirma / 2) + margenY, // Abajo a la derecha (Y)
-        centroLienzo.z + 0.02 // Eje Z exacto desde donde salen eyectadas
+        centroLienzo.x + (tamanoLienzo.x / 2) - (anchoFirma / 2) - margenX, 
+        centroLienzo.y - (tamanoLienzo.y / 2) + (altoFirma / 2) + margenY, 
+        zFrontalExacto 
     );
 
-    // AGREGAMOS AL 'model', que es donde también viven las partículas.
     model.add(mallaFirma);
 }
 
