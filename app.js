@@ -54,7 +54,7 @@ const CONFIG_POR_DEFECTO = {
     magicTransitionIntensity: 8.0,
     magicTransitionBloomStrength: 8.0,
     magicTransitionDuration: 1500,
-    magicTransitionShake: 0.03,
+    magicTransitionShake: 0.03, // Lo mantenemos en configuración para la IA
     magicTransitionParticleBurst: 100,
     cameraFov: 75,
     cameraDistanceFactor: 0.9,
@@ -455,7 +455,6 @@ async function inicializarVisorColeccion(coleccion, id) {
             const loaderContainer = document.getElementById('loader-container');
             function ocultarLoader() {
                 if (loaderContainer) {
-                    // Detiene el ciclo de los mensajes en index.html
                     if (window.loaderInterval) {
                         clearInterval(window.loaderInterval);
                     }
@@ -592,14 +591,15 @@ async function inicializarVisorColeccion(coleccion, id) {
                     const colorMagia = new THREE.Color(configNFT.emissiveColor);
                     
                     let particulasGeneradas = false;
-                    const posOriginal = model.position.clone();
 
+                    // NOTA: Se eliminó el temblor de la transición de imágenes, 
+                    // ahora el cuadro se mantiene completamente estable mientras cambia la textura.
+                    
                     function animarResplandor() {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
                         if (t >= 1) {
-                            model.position.copy(posOriginal); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             
@@ -616,19 +616,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                         material.emissive.copy(colorMagia);
                         
                         material.emissiveIntensity = curvaLuz * (configNFT.magicTransitionEnabled ? configNFT.magicTransitionBloomStrength : configNFT.bloomStrength);
-
-                        if (t < 0.5) {
-                            const shakeFactor = configNFT.magicTransitionEnabled ? configNFT.magicTransitionShake : 0.03;
-                            const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * shakeFactor; 
-                            
-                            model.position.set(
-                                posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
-                                posOriginal.y + (Math.random() - 0.5) * intensidadTemblor,
-                                posOriginal.z + (Math.random() - 0.5) * intensidadTemblor
-                            );
-                        } else {
-                            model.position.copy(posOriginal);
-                        }
 
                         if (t >= 0.5) {
                             if (material.map !== nuevaTextura) {
@@ -667,7 +654,8 @@ async function inicializarVisorColeccion(coleccion, id) {
                 ocultarLoader();
                 
                 setTimeout(() => { 
-                    escucharAlCuadro(configNFT, model, camera); 
+                    // Pasamos maxDim para que la IA sepa qué tan fuerte sacudir el modelo
+                    escucharAlCuadro(configNFT, model, camera, maxDim); 
                 }, 1500);
                 
             } else {
@@ -740,7 +728,10 @@ async function inicializarVisorColeccion(coleccion, id) {
     resizeViewer();
 }
 
-async function escucharAlCuadro(configNFT, model, camera) {
+// =========================================================================
+// IA: Texto Flotante Anclado + Temblor Exclusivo
+// =========================================================================
+async function escucharAlCuadro(configNFT, model, camera, maxDim) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
 
@@ -768,6 +759,36 @@ async function escucharAlCuadro(configNFT, model, camera) {
             opacity: 0;
         `;
         document.body.appendChild(cajaSubtitulos);
+    }
+
+    // NUEVO: Función que hace vibrar el cuadro al hablar
+    function animarTemblorIA() {
+        const duracion = 350; // Temblor corto e intenso (350ms)
+        const inicio = performance.now();
+        const posOriginal = model.position.clone();
+        const shakeFactor = configNFT.magicTransitionShake || 0.03; 
+
+        function animar() {
+            const ahora = performance.now();
+            let t = (ahora - inicio) / duracion;
+
+            if (t >= 1) {
+                model.position.copy(posOriginal); // Restaura la posición perfecta al final
+                return;
+            }
+
+            // El temblor empieza fuerte y se suaviza rápidamente
+            const intensidadTemblor = (1 - t) * maxDim * shakeFactor; 
+            
+            model.position.set(
+                posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
+                posOriginal.y + (Math.random() - 0.5) * intensidadTemblor,
+                posOriginal.z + (Math.random() - 0.5) * intensidadTemblor
+            );
+
+            requestAnimationFrame(animar);
+        }
+        animar();
     }
 
     function rastrearModelo() {
@@ -843,6 +864,9 @@ async function escucharAlCuadro(configNFT, model, camera) {
 
             cajaSubtitulos.innerText = textoIA;
             isTextVisible = true; 
+            
+            // Disparamos la sacudida de energía justo cuando aparece el texto
+            animarTemblorIA();
 
             setTimeout(() => {
                 isTextVisible = false; 
