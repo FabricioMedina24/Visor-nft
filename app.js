@@ -21,7 +21,62 @@ requestAnimationFrame(() => {
 
 function iniciarColeccion(coleccion, id) {
     console.log(`Iniciando visor dinámico para: Colección [${coleccion}] - NFT ID [${id}]`);
+    prepararLoaderDorado();
     inicializarVisorColeccion(coleccion, id);
+}
+
+// =========================================================================
+// NUEVO: Loader con línea dorada y mensajes rotativos de lore (En inglés)
+// =========================================================================
+function prepararLoaderDorado() {
+    let loaderContainer = document.getElementById('loader-container');
+    
+    // Si no existe en el HTML, lo creamos dinámicamente
+    if (!loaderContainer) {
+        loaderContainer = document.createElement('div');
+        loaderContainer.id = 'loader-container';
+        loaderContainer.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0b0b; z-index: 9999; transition: opacity 0.5s ease;';
+        document.body.appendChild(loaderContainer);
+    }
+
+    const mensajesCarga = [
+        "Restoring the legacy...",
+        "Awakening digital souls...",
+        "Connecting to the timeline...",
+        "Decrypting ancient canvas...",
+        "Weaving golden threads...",
+        "Summoning 3D entity...",
+        "Channeling the AI mind...",
+        "Stabilizing the magical field...",
+        "Loading ancient metadata...",
+        "Unlocking the vault..."
+    ];
+
+    loaderContainer.innerHTML = `
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; width: 300px;">
+            <div style="width: 100%; height: 2px; background: rgba(255, 215, 0, 0.1); position: relative; overflow: hidden; border-radius: 2px;">
+                <div style="width: 40%; height: 100%; background: #ffd700; position: absolute; left: -50%; box-shadow: 0 0 10px #ffd700, 0 0 20px #ffaa00; animation: cargaDorada 1.2s infinite ease-in-out;"></div>
+            </div>
+            <div id="loading-text-lore" style="margin-top: 15px; color: #ffd700; font-family: 'Times New Roman', serif; font-style: italic; font-size: 13px; letter-spacing: 1px; text-shadow: 0 0 8px rgba(255,215,0,0.6);">
+                ${mensajesCarga[0]}
+            </div>
+        </div>
+        <style>
+            @keyframes cargaDorada {
+                0% { left: -50%; }
+                100% { left: 100%; }
+            }
+        </style>
+    `;
+
+    // Rotar los mensajes cada 1.5 segundos
+    loaderContainer.intervaloMensajes = setInterval(() => {
+        const textEl = document.getElementById('loading-text-lore');
+        if (textEl) {
+            const index = Math.floor(Math.random() * mensajesCarga.length);
+            textEl.innerText = mensajesCarga[index];
+        }
+    }, 1500);
 }
 
 const CONFIG_POR_DEFECTO = {
@@ -212,9 +267,44 @@ function crearTexturaCirculo() {
 
 const texturaParticula = crearTexturaCirculo();
 
+// =========================================================================
+// NUEVO: HUD Fijo superior derecho para la Wallet
+// =========================================================================
+function mostrarFirmaHUD(configNFT) {
+    if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
+        return; 
+    }
+
+    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
+    const firmaHUD = document.createElement('div');
+    firmaHUD.id = 'firma-hud-superior';
+    
+    // Mismo estilo del subtítulo
+    firmaHUD.innerText = `${configNFT.ownerWallet}`;
+    
+    firmaHUD.style.cssText = `
+        position: absolute;
+        top: 25px;
+        right: 30px;
+        color: #ffffff;
+        font-family: 'Times New Roman', serif;
+        font-size: 13px;
+        font-style: italic;
+        letter-spacing: 1.5px;
+        z-index: 1000;
+        pointer-events: none;
+        text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
+        opacity: 0.8;
+    `;
+    document.body.appendChild(firmaHUD);
+}
+
 async function inicializarVisorColeccion(coleccion, id) {
     const configNFT = await obtenerConfiguracionNFT(coleccion, id);
     
+    // Llamamos a la inyección del HUD superior de la Wallet
+    mostrarFirmaHUD(configNFT);
+
     const modelPath = `models/${coleccion}/nft${id}.glb`;
     const sistemasDeParticulas = [];
 
@@ -425,8 +515,12 @@ async function inicializarVisorColeccion(coleccion, id) {
             const loaderContainer = document.getElementById('loader-container');
             function ocultarLoader() {
                 if (loaderContainer) {
+                    // Detenemos la animación de textos
+                    if (loaderContainer.intervaloMensajes) {
+                        clearInterval(loaderContainer.intervaloMensajes);
+                    }
                     loaderContainer.style.opacity = '0';
-                    setTimeout(() => loaderContainer.remove(), 400); 
+                    setTimeout(() => loaderContainer.remove(), 500); 
                 }
             }
             
@@ -629,10 +723,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                     }, configNFT.cycleInterval);
                 }
 
-                // TRUCO CLAVE: Calculamos y añadimos la firma ANTES de que el cuadro empiece a rotar.
-                // Así la "Box3" mundial captura las coordenadas frontales exactas.
-                if(lienzo) agregarFirmaDueno3D(configNFT, lienzo, model);
-
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
@@ -647,7 +737,7 @@ async function inicializarVisorColeccion(coleccion, id) {
         function (xhr) {}, 
         function (error) {
             console.error(`Error al cargar el modelo .glb: ${modelPath}`, error);
-            const textElement = document.querySelector('.loading-text');
+            const textElement = document.getElementById('loading-text-lore');
             if (textElement) textElement.innerText = `Error: No se pudo cargar '${coleccion}' (NFT #${id})`;
         }
     );
@@ -709,85 +799,6 @@ async function inicializarVisorColeccion(coleccion, id) {
     window.addEventListener('resize', resizeViewer);
     resizeViewer();
 }
-
-// =========================================================================
-// NUEVO: STICKER 3D REAL (Firma del dueño en el lienzo) - ESTILO FIRMA DIAGONAL
-// =========================================================================
-function agregarFirmaDueno3D(configNFT, lienzo, model) {
-    if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
-        return; 
-    }
-
-    const canvas = document.createElement('canvas');
-    canvas.width = 1024;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = '#FFD700';
-    ctx.font = 'italic 55px "Brush Script MT", "Lucida Handwriting", cursive';
-    ctx.textAlign = 'right';
-    ctx.textBaseline = 'middle';
-    
-    ctx.shadowColor = '#FFA500'; 
-    ctx.shadowBlur = 10;
-    
-    ctx.fillText(configNFT.ownerWallet, canvas.width - 20, canvas.height / 2);
-
-    const texturaFirma = new THREE.CanvasTexture(canvas);
-    texturaFirma.colorSpace = THREE.SRGBColorSpace;
-    texturaFirma.anisotropy = 16; 
-
-    const materialFirma = new THREE.MeshBasicMaterial({
-        map: texturaFirma,
-        transparent: true,
-        alphaTest: 0.05, 
-        color: new THREE.Color(0xffaa00).multiplyScalar(2.0), 
-        depthWrite: false, 
-        polygonOffset: true,
-        polygonOffsetFactor: -10, 
-        polygonOffsetUnits: -10
-    });
-
-    const aspectRatio = canvas.width / canvas.height;
-    const geometriaPlano = new THREE.PlaneGeometry(1, 1);
-    const mallaFirma = new THREE.Mesh(geometriaPlano, materialFirma);
-    
-    mallaFirma.renderOrder = 999; 
-
-    // ROTACIÓN DIAGONAL (15 grados hacia arriba)
-    mallaFirma.rotation.z = THREE.MathUtils.degToRad(35);
-
-    // CAJA ALINEADA AL EJE MUNDIAL IGUAL QUE LAS PARTÍCULAS
-    const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
-    const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
-    const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
-
-    // TAMAÑO MÁS PEQUEÑO (2.5% del alto del cuadro)
-    const altoFirma = tamanoLienzo.y * 0.025; 
-    const anchoFirma = altoFirma * aspectRatio;
-    
-    mallaFirma.scale.set(anchoFirma, altoFirma, 1);
-
-    // Márgenes para compensar la inclinación
-    const margenX = tamanoLienzo.x * 0.035;
-    const margenY = tamanoLienzo.y * 0.035;
-    
-    // CÁLCULO SÚPER PEGADO:
-    // tamanoLienzo.z es el grosor total de la tela en 3D. 
-    // Le sumamos la mitad de su grosor al centro exacto y le damos un desfase de sólo 0.001 mm.
-    const zFrontalExacto = centroLienzo.z + (tamanoLienzo.z / 2) + 0.001;
-
-    mallaFirma.position.set(
-        centroLienzo.x + (tamanoLienzo.x / 2) - (anchoFirma / 2) - margenX, 
-        centroLienzo.y - (tamanoLienzo.y / 2) + (altoFirma / 2) + margenY, 
-        zFrontalExacto 
-    );
-
-    model.add(mallaFirma);
-}
-
 
 // =========================================================================
 // IA: Texto Flotante Anclado + Bucle Temporal + Regla Estricta
