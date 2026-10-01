@@ -14,8 +14,7 @@ const coleccionActual = urlParams.get('collection') || 'ancient';
 const modelId = urlParams.get('id') || '1';
 
 // =========================================================================
-// NUEVO: Diccionario central de Contratos Inteligentes
-// Agrega aquí los contratos de tus futuras colecciones.
+// Diccionario central de Contratos Inteligentes
 // =========================================================================
 const CONTRATOS_COLECCIONES = {
     'ancient': '0x543917Fe53085844502F5F5E226C968435b6D858',
@@ -89,15 +88,18 @@ function parsearHexColor(color, fallback) {
     return fallback;
 }
 
+// =========================================================================
+// NUEVA VERSIÓN: RPC más amigable con Sandbox/CORS de OpenSea
+// =========================================================================
 async function obtenerDuenoDeBlockchain(contractAddress, tokenId) {
-    const RPC_URL = 'https://polygon-rpc.com'; 
+    const RPC_URL = 'https://polygon.llamarpc.com'; 
 
     if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
-        return 'Contrato no especificado';
+        return '';
     }
 
     try {
-        const funcionHash = '0x6352211e'; // Hash de la función ownerOf(uint256)
+        const funcionHash = '0x6352211e';
         const tokenHex = parseInt(tokenId).toString(16).padStart(64, '0');
         const dataPayload = funcionHash + tokenHex;
 
@@ -112,6 +114,11 @@ async function obtenerDuenoDeBlockchain(contractAddress, tokenId) {
             })
         });
         
+        if (!respuesta.ok) {
+            console.warn(`RPC bloqueado (Cód: ${respuesta.status}). OpenSea Sandbox limita las consultas Web3.`);
+            return 'Wallet oculta (Seguridad OS)';
+        }
+        
         const json = await respuesta.json();
         
         if (json.result && json.result !== '0x') {
@@ -120,8 +127,8 @@ async function obtenerDuenoDeBlockchain(contractAddress, tokenId) {
         }
         return 'Wallet no encontrada';
     } catch (e) {
-        console.error("Fallo al contactar la blockchain:", e);
-        return 'Sin conexión Web3';
+        console.warn("Fallo de red al contactar la blockchain. Probablemente bloqueado por CORS de OpenSea.", e);
+        return 'Wallet protegida';
     }
 }
 
@@ -138,11 +145,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
-        // Ya no dependemos del JSON para saber la dirección del contrato
-        // Extraemos la dirección centralizada basándonos en la URL actual
         const direccionContrato = CONTRATOS_COLECCIONES[coleccion] || '0x0000000000000000000000000000000000000000';
-        
-        // Hacemos la consulta a la blockchain
         const duenoAutomatico = await obtenerDuenoDeBlockchain(direccionContrato, id);
 
         return {
