@@ -13,6 +13,15 @@ const urlParams = new URLSearchParams(window.location.search);
 const coleccionActual = urlParams.get('collection') || 'ancient';
 const modelId = urlParams.get('id') || '1';
 
+// =========================================================================
+// NUEVO: Diccionario central de Contratos Inteligentes
+// Agrega aquí los contratos de tus futuras colecciones.
+// =========================================================================
+const CONTRATOS_COLECCIONES = {
+    'ancient': '0x543917Fe53085844502F5F5E226C968435b6D858',
+    'otra_coleccion': '0x0000000000000000000000000000000000000000'
+};
+
 requestAnimationFrame(() => {
     setTimeout(() => {
         iniciarColeccion(coleccionActual, modelId);
@@ -54,7 +63,7 @@ const CONFIG_POR_DEFECTO = {
     magicTransitionIntensity: 8.0,
     magicTransitionBloomStrength: 8.0,
     magicTransitionDuration: 1500,
-    magicTransitionShake: 0.03, // Lo mantenemos en configuración para la IA
+    magicTransitionShake: 0.03,
     magicTransitionParticleBurst: 100,
     cameraFov: 75,
     cameraDistanceFactor: 0.9,
@@ -88,7 +97,7 @@ async function obtenerDuenoDeBlockchain(contractAddress, tokenId) {
     }
 
     try {
-        const funcionHash = '0x6352211e';
+        const funcionHash = '0x6352211e'; // Hash de la función ownerOf(uint256)
         const tokenHex = parseInt(tokenId).toString(16).padStart(64, '0');
         const dataPayload = funcionHash + tokenHex;
 
@@ -129,12 +138,15 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
-        const direccionContrato = metadata.contract_address || '0x0000000000000000000000000000000000000000';
+        // Ya no dependemos del JSON para saber la dirección del contrato
+        // Extraemos la dirección centralizada basándonos en la URL actual
+        const direccionContrato = CONTRATOS_COLECCIONES[coleccion] || '0x0000000000000000000000000000000000000000';
+        
+        // Hacemos la consulta a la blockchain
         const duenoAutomatico = await obtenerDuenoDeBlockchain(direccionContrato, id);
 
         return {
             titulo: metadata.title || 'Asset Desconocido',
-            contractAddress: direccionContrato,
             ownerWallet: duenoAutomatico, 
             
             ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
@@ -183,7 +195,6 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ...CONFIG_POR_DEFECTO,
             backgroundImage: `environments/${coleccion}/bg_${id}.png`,
             titulo: 'Error de carga',
-            contractAddress: '0xERROR',
             ownerWallet: 'Desconocido',
             ai_identity: 'Fragmento corrupto',
             ai_personality: 'Confundida y balbuceante',
@@ -592,9 +603,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                     
                     let particulasGeneradas = false;
 
-                    // NOTA: Se eliminó el temblor de la transición de imágenes, 
-                    // ahora el cuadro se mantiene completamente estable mientras cambia la textura.
-                    
                     function animarResplandor() {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
@@ -654,7 +662,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                 ocultarLoader();
                 
                 setTimeout(() => { 
-                    // Pasamos maxDim para que la IA sepa qué tan fuerte sacudir el modelo
                     escucharAlCuadro(configNFT, model, camera, maxDim); 
                 }, 1500);
                 
@@ -728,9 +735,6 @@ async function inicializarVisorColeccion(coleccion, id) {
     resizeViewer();
 }
 
-// =========================================================================
-// IA: Texto Flotante Anclado + Temblor Exclusivo
-// =========================================================================
 async function escucharAlCuadro(configNFT, model, camera, maxDim) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
@@ -761,9 +765,8 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
         document.body.appendChild(cajaSubtitulos);
     }
 
-    // NUEVO: Función que hace vibrar el cuadro al hablar
     function animarTemblorIA() {
-        const duracion = 350; // Temblor corto e intenso (350ms)
+        const duracion = 350; 
         const inicio = performance.now();
         const posOriginal = model.position.clone();
         const shakeFactor = configNFT.magicTransitionShake || 0.03; 
@@ -773,11 +776,10 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
             let t = (ahora - inicio) / duracion;
 
             if (t >= 1) {
-                model.position.copy(posOriginal); // Restaura la posición perfecta al final
+                model.position.copy(posOriginal); 
                 return;
             }
 
-            // El temblor empieza fuerte y se suaviza rápidamente
             const intensidadTemblor = (1 - t) * maxDim * shakeFactor; 
             
             model.position.set(
@@ -865,7 +867,6 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
             cajaSubtitulos.innerText = textoIA;
             isTextVisible = true; 
             
-            // Disparamos la sacudida de energía justo cuando aparece el texto
             animarTemblorIA();
 
             setTimeout(() => {
