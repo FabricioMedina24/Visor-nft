@@ -21,62 +21,7 @@ requestAnimationFrame(() => {
 
 function iniciarColeccion(coleccion, id) {
     console.log(`Iniciando visor dinámico para: Colección [${coleccion}] - NFT ID [${id}]`);
-    prepararLoaderDorado();
     inicializarVisorColeccion(coleccion, id);
-}
-
-// =========================================================================
-// NUEVO: Loader con línea dorada y mensajes rotativos de lore (En inglés)
-// =========================================================================
-function prepararLoaderDorado() {
-    let loaderContainer = document.getElementById('loader-container');
-    
-    // Si no existe en el HTML, lo creamos dinámicamente
-    if (!loaderContainer) {
-        loaderContainer = document.createElement('div');
-        loaderContainer.id = 'loader-container';
-        loaderContainer.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #0b0b0b; z-index: 9999; transition: opacity 0.5s ease;';
-        document.body.appendChild(loaderContainer);
-    }
-
-    const mensajesCarga = [
-        "Restoring the legacy...",
-        "Awakening digital souls...",
-        "Connecting to the timeline...",
-        "Decrypting ancient canvas...",
-        "Weaving golden threads...",
-        "Summoning 3D entity...",
-        "Channeling the AI mind...",
-        "Stabilizing the magical field...",
-        "Loading ancient metadata...",
-        "Unlocking the vault..."
-    ];
-
-    loaderContainer.innerHTML = `
-        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; width: 300px;">
-            <div style="width: 100%; height: 2px; background: rgba(255, 215, 0, 0.1); position: relative; overflow: hidden; border-radius: 2px;">
-                <div style="width: 40%; height: 100%; background: #ffd700; position: absolute; left: -50%; box-shadow: 0 0 10px #ffd700, 0 0 20px #ffaa00; animation: cargaDorada 1.2s infinite ease-in-out;"></div>
-            </div>
-            <div id="loading-text-lore" style="margin-top: 15px; color: #ffd700; font-family: 'Times New Roman', serif; font-style: italic; font-size: 13px; letter-spacing: 1px; text-shadow: 0 0 8px rgba(255,215,0,0.6);">
-                ${mensajesCarga[0]}
-            </div>
-        </div>
-        <style>
-            @keyframes cargaDorada {
-                0% { left: -50%; }
-                100% { left: 100%; }
-            }
-        </style>
-    `;
-
-    // Rotar los mensajes cada 1.5 segundos
-    loaderContainer.intervaloMensajes = setInterval(() => {
-        const textEl = document.getElementById('loading-text-lore');
-        if (textEl) {
-            const index = Math.floor(Math.random() * mensajesCarga.length);
-            textEl.innerText = mensajesCarga[index];
-        }
-    }, 1500);
 }
 
 const CONFIG_POR_DEFECTO = {
@@ -267,9 +212,6 @@ function crearTexturaCirculo() {
 
 const texturaParticula = crearTexturaCirculo();
 
-// =========================================================================
-// NUEVO: HUD Fijo superior derecho para la Wallet
-// =========================================================================
 function mostrarFirmaHUD(configNFT) {
     if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
         return; 
@@ -279,7 +221,6 @@ function mostrarFirmaHUD(configNFT) {
     const firmaHUD = document.createElement('div');
     firmaHUD.id = 'firma-hud-superior';
     
-    // Mismo estilo del subtítulo
     firmaHUD.innerText = `${configNFT.ownerWallet}`;
     
     firmaHUD.style.cssText = `
@@ -302,7 +243,6 @@ function mostrarFirmaHUD(configNFT) {
 async function inicializarVisorColeccion(coleccion, id) {
     const configNFT = await obtenerConfiguracionNFT(coleccion, id);
     
-    // Llamamos a la inyección del HUD superior de la Wallet
     mostrarFirmaHUD(configNFT);
 
     const modelPath = `models/${coleccion}/nft${id}.glb`;
@@ -515,9 +455,9 @@ async function inicializarVisorColeccion(coleccion, id) {
             const loaderContainer = document.getElementById('loader-container');
             function ocultarLoader() {
                 if (loaderContainer) {
-                    // Detenemos la animación de textos
-                    if (loaderContainer.intervaloMensajes) {
-                        clearInterval(loaderContainer.intervaloMensajes);
+                    // Detiene el ciclo de los mensajes en index.html
+                    if (window.loaderInterval) {
+                        clearInterval(window.loaderInterval);
                     }
                     loaderContainer.style.opacity = '0';
                     setTimeout(() => loaderContainer.remove(), 500); 
@@ -800,9 +740,6 @@ async function inicializarVisorColeccion(coleccion, id) {
     resizeViewer();
 }
 
-// =========================================================================
-// IA: Texto Flotante Anclado + Bucle Temporal + Regla Estricta
-// =========================================================================
 async function escucharAlCuadro(configNFT, model, camera) {
     let cajaSubtitulos = document.getElementById('subtitulo-ia');
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
