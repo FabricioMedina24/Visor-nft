@@ -89,47 +89,53 @@ function parsearHexColor(color, fallback) {
 }
 
 // =========================================================================
-// NUEVA VERSIÓN: RPC más amigable con Sandbox/CORS de OpenSea
+// SISTEMA ANTI-CORS: Rotación de Nodos RPC
 // =========================================================================
 async function obtenerDuenoDeBlockchain(contractAddress, tokenId) {
-    const RPC_URL = 'https://polygon.llamarpc.com'; 
-
     if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
         return '';
     }
 
-    try {
-        const funcionHash = '0x6352211e';
-        const tokenHex = parseInt(tokenId).toString(16).padStart(64, '0');
-        const dataPayload = funcionHash + tokenHex;
+    // Lista de nodos públicos robustos. Si uno falla o bloquea el origen "null", salta al siguiente.
+    const RPC_URLS = [
+        'https://polygon-rpc.com',
+        'https://rpc-mainnet.maticvigil.com',
+        'https://polygon.meowrpc.com',
+        'https://polygon-mainnet.public.blastapi.io'
+    ];
 
-        const respuesta = await fetch(RPC_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                jsonrpc: '2.0',
-                method: 'eth_call',
-                params: [{ to: contractAddress, data: dataPayload }, 'latest'],
-                id: 1
-            })
-        });
-        
-        if (!respuesta.ok) {
-            console.warn(`RPC bloqueado (Cód: ${respuesta.status}). OpenSea Sandbox limita las consultas Web3.`);
-            return 'Wallet oculta (Seguridad OS)';
+    const funcionHash = '0x6352211e';
+    const tokenHex = parseInt(tokenId).toString(16).padStart(64, '0');
+    const dataPayload = funcionHash + tokenHex;
+
+    for (let rpc of RPC_URLS) {
+        try {
+            const respuesta = await fetch(rpc, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    method: 'eth_call',
+                    params: [{ to: contractAddress, data: dataPayload }, 'latest'],
+                    id: 1
+                })
+            });
+            
+            if (respuesta.ok) {
+                const json = await respuesta.json();
+                if (json.result && json.result !== '0x') {
+                    return '0x' + json.result.slice(-40);
+                }
+                return 'Wallet no encontrada';
+            }
+        } catch (e) {
+            console.warn(`Nodo bloqueado por OpenSea Sandbox (${rpc}), intentando con respaldo...`);
+            // Continúa silenciosamente al siguiente nodo en la lista
         }
-        
-        const json = await respuesta.json();
-        
-        if (json.result && json.result !== '0x') {
-            const walletReal = '0x' + json.result.slice(-40);
-            return walletReal;
-        }
-        return 'Wallet no encontrada';
-    } catch (e) {
-        console.warn("Fallo de red al contactar la blockchain. Probablemente bloqueado por CORS de OpenSea.", e);
-        return 'Wallet protegida';
     }
+    
+    // Si todos fallan debido al bloqueo de OpenSea
+    return 'Dueño Oculto (Privacidad OS)';
 }
 
 async function obtenerConfiguracionNFT(coleccion, id) {
