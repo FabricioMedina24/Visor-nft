@@ -3,10 +3,6 @@
   "name": "visor-nft",
   "compatibility_date": "2026-06-02",
   "assets": {
-    "directory": ".",
-    "headers": {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS"
-    }
+    "directory": "."
   }
 }
