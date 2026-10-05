@@ -8,37 +8,114 @@
     <link rel="stylesheet" href="./style.css">
 
     <style>
-        body { margin: 0; overflow: hidden; background-color: #0b0b0b; }
-        #loader-container { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; z-index: 99999; background-color: #0b0b0b; transition: opacity 0.5s ease; }
-        .loader-box { display: flex; flex-direction: column; align-items: center; width: 300px; }
-        .golden-track { width: 100%; height: 2px; background: rgba(255, 215, 0, 0.1); position: relative; overflow: hidden; border-radius: 2px; }
-        .golden-bar { width: 40%; height: 100%; background: #ffd700; position: absolute; left: -50%; box-shadow: 0 0 10px #ffd700, 0 0 20px #ffaa00; animation: cargaDorada 1.2s infinite ease-in-out; }
-        @keyframes cargaDorada { 0% { left: -50%; } 100% { left: 100%; } }
-        #loading-text-lore { margin-top: 15px; color: #ffd700; font-family: 'Times New Roman', Times, serif; font-style: italic; font-size: 13px; letter-spacing: 1px; text-shadow: 0 0 8px rgba(255,215,0,0.6); text-align: center; }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0b0b0b;
+        }
+
+        #loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            background-color: #0b0b0b; 
+            transition: opacity 0.5s ease;
+        }
+
+        .loader-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 300px;
+        }
+
+        .golden-track {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 215, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            border-radius: 2px;
+        }
+
+        .golden-bar {
+            width: 40%;
+            height: 100%;
+            background: #ffd700;
+            position: absolute;
+            left: -50%;
+            box-shadow: 0 0 10px #ffd700, 0 0 20px #ffaa00;
+            animation: cargaDorada 1.2s infinite ease-in-out;
+        }
+
+        @keyframes cargaDorada {
+            0% { left: -50%; }
+            100% { left: 100%; }
+        }
+
+        #loading-text-lore {
+            margin-top: 15px;
+            color: #ffd700;
+            font-family: 'Times New Roman', Times, serif;
+            font-style: italic;
+            font-size: 13px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 8px rgba(255,215,0,0.6);
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+
+    <!-- PANTALLA DE CARGA CON LÍNEA DORADA -->
     <div id="loader-container">
         <div class="loader-box">
-            <div class="golden-track"><div class="golden-bar"></div></div>
+            <div class="golden-track">
+                <div class="golden-bar"></div>
+            </div>
             <div id="loading-text-lore">Restoring the legacy...</div>
         </div>
     </div>
 
+    <!-- SCRIPT PARA ROTAR LOS MENSAJES INMEDIATAMENTE -->
     <script>
         const mensajesCarga = [
-            "Restoring the legacy...", "Awakening digital souls...", "Connecting to the timeline...",
-            "Decrypting ancient canvas...", "Weaving golden threads...", "Summoning 3D entity...",
-            "Channeling the AI mind...", "Stabilizing the magical field...", "Loading ancient metadata...",
+            "Restoring the legacy...",
+            "Awakening digital souls...",
+            "Connecting to the timeline...",
+            "Decrypting ancient canvas...",
+            "Weaving golden threads...",
+            "Summoning 3D entity...",
+            "Channeling the AI mind...",
+            "Stabilizing the magical field...",
+            "Loading ancient metadata...",
             "Unlocking the vault..."
         ];
+
         const textEl = document.getElementById('loading-text-lore');
+        
+        // Lo guardamos en window para que app.js lo pueda detener luego
         window.loaderInterval = setInterval(() => {
             if (textEl) {
                 const index = Math.floor(Math.random() * mensajesCarga.length);
                 textEl.innerText = mensajesCarga[index];
             }
         }, 1500);
+    </script>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        }
+      }
     </script>
 
     <script type="module" src="./app.js"></script>
