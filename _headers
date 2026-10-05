@@ -1,6 +1,2 @@
 /*
   Access-Control-Allow-Origin: *
-  Access-Control-Allow-Methods: GET, HEAD, OPTIONS
-  Access-Control-Allow-Headers: *
-  X-Frame-Options: ALLOWALL
-  Content-Security-Policy: frame-ancestors *
