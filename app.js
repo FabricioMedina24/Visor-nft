@@ -13,14 +13,6 @@ const urlParams = new URLSearchParams(window.location.search);
 const coleccionActual = urlParams.get('collection') || 'ancient';
 const modelId = urlParams.get('id') || '1';
 
-// =========================================================================
-// Diccionario central de Contratos Inteligentes
-// =========================================================================
-const CONTRATOS_COLECCIONES = {
-    'ancient': '0x543917Fe53085844502F5F5E226C968435b6D858',
-    'otra_coleccion': '0x0000000000000000000000000000000000000000'
-};
-
 requestAnimationFrame(() => {
     setTimeout(() => {
         iniciarColeccion(coleccionActual, modelId);
@@ -88,56 +80,6 @@ function parsearHexColor(color, fallback) {
     return fallback;
 }
 
-// =========================================================================
-// SISTEMA ANTI-CORS: Rotación de Nodos RPC
-// =========================================================================
-async function obtenerDuenoDeBlockchain(contractAddress, tokenId) {
-    if (!contractAddress || contractAddress === '0x0000000000000000000000000000000000000000') {
-        return '';
-    }
-
-    // Lista de nodos públicos robustos. Si uno falla o bloquea el origen "null", salta al siguiente.
-    const RPC_URLS = [
-        'https://polygon-rpc.com',
-        'https://rpc-mainnet.maticvigil.com',
-        'https://polygon.meowrpc.com',
-        'https://polygon-mainnet.public.blastapi.io'
-    ];
-
-    const funcionHash = '0x6352211e';
-    const tokenHex = parseInt(tokenId).toString(16).padStart(64, '0');
-    const dataPayload = funcionHash + tokenHex;
-
-    for (let rpc of RPC_URLS) {
-        try {
-            const respuesta = await fetch(rpc, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    jsonrpc: '2.0',
-                    method: 'eth_call',
-                    params: [{ to: contractAddress, data: dataPayload }, 'latest'],
-                    id: 1
-                })
-            });
-            
-            if (respuesta.ok) {
-                const json = await respuesta.json();
-                if (json.result && json.result !== '0x') {
-                    return '0x' + json.result.slice(-40);
-                }
-                return 'Wallet no encontrada';
-            }
-        } catch (e) {
-            console.warn(`Nodo bloqueado por OpenSea Sandbox (${rpc}), intentando con respaldo...`);
-            // Continúa silenciosamente al siguiente nodo en la lista
-        }
-    }
-    
-    // Si todos fallan debido al bloqueo de OpenSea
-    return 'Dueño Oculto (Privacidad OS)';
-}
-
 async function obtenerConfiguracionNFT(coleccion, id) {
     try {
         const urlMetadatos = `metadata/${coleccion}/nft${id}.json`; 
@@ -151,12 +93,8 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const colorBaseMagia = parsearHexColor(metadata.canvas?.emissive_color, estilosRareza.colorMagia);
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
-        const direccionContrato = CONTRATOS_COLECCIONES[coleccion] || '0x0000000000000000000000000000000000000000';
-        const duenoAutomatico = await obtenerDuenoDeBlockchain(direccionContrato, id);
-
         return {
             titulo: metadata.title || 'Asset Desconocido',
-            ownerWallet: duenoAutomatico, 
             
             ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
             ai_personality: metadata.ai_mind?.personality || 'Poética, errática y con necesidad de atención',
@@ -204,7 +142,6 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ...CONFIG_POR_DEFECTO,
             backgroundImage: `environments/${coleccion}/bg_${id}.png`,
             titulo: 'Error de carga',
-            ownerWallet: 'Desconocido',
             ai_identity: 'Fragmento corrupto',
             ai_personality: 'Confundida y balbuceante',
             ai_desire: 'Entender dónde está',
@@ -232,39 +169,9 @@ function crearTexturaCirculo() {
 
 const texturaParticula = crearTexturaCirculo();
 
-function mostrarFirmaHUD(configNFT) {
-    if (!configNFT.ownerWallet || configNFT.ownerWallet === 'Desconocido' || configNFT.ownerWallet === 'Wallet no encontrada') {
-        return; 
-    }
-
-    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
-    const firmaHUD = document.createElement('div');
-    firmaHUD.id = 'firma-hud-superior';
-    
-    firmaHUD.innerText = `${configNFT.ownerWallet}`;
-    
-    firmaHUD.style.cssText = `
-        position: absolute;
-        top: 25px;
-        right: 30px;
-        color: #ffffff;
-        font-family: 'Times New Roman', serif;
-        font-size: 13px;
-        font-style: italic;
-        letter-spacing: 1.5px;
-        z-index: 1000;
-        pointer-events: none;
-        text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
-        opacity: 0.8;
-    `;
-    document.body.appendChild(firmaHUD);
-}
-
 async function inicializarVisorColeccion(coleccion, id) {
     const configNFT = await obtenerConfiguracionNFT(coleccion, id);
     
-    mostrarFirmaHUD(configNFT);
-
     const modelPath = `models/${coleccion}/nft${id}.glb`;
     const sistemasDeParticulas = [];
 
@@ -845,10 +752,10 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                     messages: [
                         { 
                             role: "system", 
-                            content: `Eres una entidad atrapada en un cuadro. 
+                            content: `Eres una inteligencia artificial atrapada en un cuadro. 
                             Identidad: ${configNFT.ai_identity}. Personalidad: ${configNFT.ai_personality}. 
-                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido al vacío. 
-                            REGLA ESTRICTA: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 15 palabras).` 
+                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante. 
+                            REGLA ESTRICTA: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).` 
                         },
                         {
                             role: "user",
