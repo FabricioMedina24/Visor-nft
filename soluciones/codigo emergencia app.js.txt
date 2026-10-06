@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-// Importaciones requeridas para el canal de Postprocesado (Bloom)
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -10,12 +9,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 let composer; 
 
-// =========================================================================
-// ENRUTADOR DINÁMICO UNIVERSAL DE COLECCIONES
-// =========================================================================
 const urlParams = new URLSearchParams(window.location.search);
-
-const coleccionActual = urlParams.get('collection') || 'first_collection';
+const coleccionActual = urlParams.get('collection') || 'ancient';
 const modelId = urlParams.get('id') || '1';
 
 requestAnimationFrame(() => {
@@ -29,9 +24,6 @@ function iniciarColeccion(coleccion, id) {
     inicializarVisorColeccion(coleccion, id);
 }
 
-// =========================================================================
-// CONFIGURACIÓN POR DEFECTO Y VALORES POR RAREZA
-// =========================================================================
 const CONFIG_POR_DEFECTO = {
     rarity: 'common',
     framesCount: 1,         
@@ -40,42 +32,30 @@ const CONFIG_POR_DEFECTO = {
     fuerzaBloom: 0.0,       
     colorFondo: 0x0b0b0b,
     backgroundImage: null,
-    mediaFiles: null, // NUEVO: Soporte para nombres de archivo específicos
-    
-    // Transformaciones
+    mediaFiles: null, 
     scale: 1.0,
     rotationY: 0,
     offsetY: 0.0,
-
-    // Iluminación y Postprocesado
     ambientIntensity: 0.35,
     cameraLightIntensity: 1.4,
     bloomStrength: 0.0,
     bloomRadius: 0.4,
     bloomThreshold: 0.85,
-
-    // Partículas
     particlesEnabled: true,
     particleCount: 35,
     particleColor: 0x000000,
     particleSpeed: 1.0,
     particleSizeFactor: 0.0035,
-
-    // Lienzo y Transiciones
     emissiveColor: 0x000000,
     transitionDuration: 1500,
     introSpinSpeed: 16,
     introBloomStrength: 8.0, 
-
-    // Transición Mágica
     magicTransitionEnabled: true,
     magicTransitionIntensity: 8.0,
     magicTransitionBloomStrength: 8.0,
     magicTransitionDuration: 1500,
     magicTransitionShake: 0.03,
     magicTransitionParticleBurst: 100,
-
-    // Cámara
     cameraFov: 75,
     cameraDistanceFactor: 0.9,
     autoRotateSpeed: 1.0,
@@ -114,49 +94,49 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         const magicBloom = metadata.magic_transition?.bloom_strength ?? metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionBloomStrength;
 
         return {
+            titulo: metadata.title || 'Asset Desconocido',
+            
+            ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
+            ai_personality: metadata.ai_mind?.personality || 'Poética, errática y con necesidad de atención',
+            ai_desire: metadata.ai_mind?.desire || 'Ser escuchada',
+            ai_awareness: metadata.ai_mind?.awareness || 'Sabe que está en un visor 3D',
+            ai_language: metadata.ai_mind?.language || 'Español', 
+            ai_alignment: metadata.ai_mind?.alignment || 'Neutral',
+            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
+            ai_architecture: metadata.ai_mind?.architecture || 'Desconocida',
+            ai_encryption: metadata.ai_mind?.encryption || 'Ninguna',
+            ai_description: metadata.ai_mind?.description || 'Entidad sin descripción detallada.',
+            ai_generation: metadata.ai_mind?.generation || 'Gen ?',
+
             rarity: rarezaLimpia,
             framesCount: metadata.frames_count ?? CONFIG_POR_DEFECTO.framesCount,
             cycleInterval: metadata.cycle_interval ?? CONFIG_POR_DEFECTO.cycleInterval,
             backgroundImage: metadata.background_image || `environments/${coleccion}/bg_${id}.png`,
             colorFondo: estilosRareza.colorFondo,
-            
-            // NUEVO: Leemos los archivos de medios (si existen)
             mediaFiles: metadata.media_files || null,
-
-            // Transformaciones
             scale: metadata.transform?.scale ?? CONFIG_POR_DEFECTO.scale,
             rotationY: metadata.transform?.rotation_y ?? CONFIG_POR_DEFECTO.rotationY,
             offsetY: metadata.transform?.offset_y ?? CONFIG_POR_DEFECTO.offsetY,
-
-            // Iluminación
             ambientIntensity: metadata.lighting?.ambient_intensity ?? CONFIG_POR_DEFECTO.ambientIntensity,
             cameraLightIntensity: metadata.lighting?.camera_light_intensity ?? CONFIG_POR_DEFECTO.cameraLightIntensity,
             bloomStrength: metadata.lighting?.bloom_strength ?? estilosRareza.fuerzaBloom,
             bloomRadius: metadata.lighting?.bloom_radius ?? CONFIG_POR_DEFECTO.bloomRadius,
             bloomThreshold: metadata.lighting?.bloom_threshold ?? CONFIG_POR_DEFECTO.bloomThreshold,
-
-            // Partículas
             particlesEnabled: metadata.particles?.enabled ?? CONFIG_POR_DEFECTO.particlesEnabled,
             particleCount: metadata.particles?.count ?? CONFIG_POR_DEFECTO.particleCount,
             particleColor: parsearHexColor(metadata.particles?.color, colorBaseMagia),
             particleSpeed: metadata.particles?.speed ?? CONFIG_POR_DEFECTO.particleSpeed,
             particleSizeFactor: metadata.particles?.size_factor ?? CONFIG_POR_DEFECTO.particleSizeFactor,
-
-            // Lienzo
             emissiveColor: colorBaseMagia,
             transitionDuration: metadata.canvas?.transition_duration ?? CONFIG_POR_DEFECTO.transitionDuration,
             introSpinSpeed: metadata.canvas?.intro_spin_speed ?? CONFIG_POR_DEFECTO.introSpinSpeed,
             introBloomStrength: metadata.canvas?.intro_bloom_strength ?? magicBloom,
-
-            // Transición Mágica
             magicTransitionEnabled: metadata.magic_transition?.enabled ?? CONFIG_POR_DEFECTO.magicTransitionEnabled,
             magicTransitionIntensity: metadata.magic_transition?.intensity ?? CONFIG_POR_DEFECTO.magicTransitionIntensity,
             magicTransitionBloomStrength: magicBloom,
             magicTransitionDuration: metadata.magic_transition?.duration ?? CONFIG_POR_DEFECTO.magicTransitionDuration,
             magicTransitionShake: metadata.magic_transition?.shake ?? CONFIG_POR_DEFECTO.magicTransitionShake,
             magicTransitionParticleBurst: metadata.magic_transition?.particle_burst ?? CONFIG_POR_DEFECTO.magicTransitionParticleBurst,
-
-            // Cámara
             cameraFov: metadata.camera?.fov ?? CONFIG_POR_DEFECTO.cameraFov,
             cameraDistanceFactor: metadata.camera?.distance_factor ?? CONFIG_POR_DEFECTO.cameraDistanceFactor,
             autoRotateSpeed: metadata.camera?.auto_rotate_speed ?? CONFIG_POR_DEFECTO.autoRotateSpeed,
@@ -167,14 +147,23 @@ async function obtenerConfiguracionNFT(coleccion, id) {
         console.warn(`Aviso: Usando configuración estática por defecto debido a: ${error.message}`);
         return {
             ...CONFIG_POR_DEFECTO,
-            backgroundImage: `environments/${coleccion}/bg_${id}.png` 
+            backgroundImage: `environments/${coleccion}/bg_${id}.png`,
+            titulo: 'Error de carga',
+            ai_identity: 'Fragmento corrupto',
+            ai_personality: 'Confundida y balbuceante',
+            ai_desire: 'Entender dónde está',
+            ai_awareness: 'Desorientada',
+            ai_language: 'Español',
+            ai_alignment: 'Neutral',
+            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
+            ai_architecture: 'Corrupta',
+            ai_encryption: 'Fragmentada',
+            ai_description: 'Archivos dañados.',
+            ai_generation: 'N/A'
         }; 
     }
 }
 
-// =======================================================
-// CREAR TEXTURA REDONDA PARA LAS PARTÍCULAS
-// =======================================================
 function crearTexturaCirculo() {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
@@ -194,9 +183,6 @@ function crearTexturaCirculo() {
 
 const texturaParticula = crearTexturaCirculo();
 
-// =======================================================
-// LÓGICA PRINCIPAL DEL VISOR 3D (UNIVERSAL)
-// =======================================================
 async function inicializarVisorColeccion(coleccion, id) {
     const configNFT = await obtenerConfiguracionNFT(coleccion, id);
     
@@ -205,7 +191,6 @@ async function inicializarVisorColeccion(coleccion, id) {
 
     const scene = new THREE.Scene();
 
-    // Carga de imagen de fondo o color
     if (configNFT.backgroundImage) {
         const bgLoader = new THREE.TextureLoader();
         bgLoader.load(
@@ -216,7 +201,6 @@ async function inicializarVisorColeccion(coleccion, id) {
             },
             undefined,
             function (err) {
-                console.warn(`No se pudo cargar la imagen de fondo: ${configNFT.backgroundImage}. Usando color de respaldo.`);
                 scene.background = new THREE.Color(configNFT.colorFondo); 
             }
         );
@@ -412,8 +396,11 @@ async function inicializarVisorColeccion(coleccion, id) {
             const loaderContainer = document.getElementById('loader-container');
             function ocultarLoader() {
                 if (loaderContainer) {
+                    if (window.loaderInterval) {
+                        clearInterval(window.loaderInterval);
+                    }
                     loaderContainer.style.opacity = '0';
-                    setTimeout(() => loaderContainer.remove(), 400); 
+                    setTimeout(() => loaderContainer.remove(), 500); 
                 }
             }
             
@@ -426,12 +413,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                 const texturas = [];
                 let indiceActual = -1; 
 
-                // =======================================================
-                // NUEVA LÓGICA DE CARGA MIXTA (IMÁGENES Y VIDEOS)
-                // =======================================================
-                
-                // Si el JSON provee un array de archivos (ej. ["1.png", "animacion.mp4"])
-                // Si no, construye el array antiguo ["1.png", "2.png"...] automáticamente
                 let archivosMedia = configNFT.mediaFiles;
                 if (!archivosMedia || archivosMedia.length === 0) {
                     archivosMedia = [];
@@ -445,22 +426,19 @@ async function inicializarVisorColeccion(coleccion, id) {
                     const esVideo = archivo.toLowerCase().endsWith('.mp4') || archivo.toLowerCase().endsWith('.webm');
 
                     if (esVideo) {
-                        // Crear elemento de video HTML dinámico
                         const video = document.createElement('video');
                         video.src = url;
                         video.crossOrigin = 'anonymous';
                         video.loop = true;
-                        video.muted = true; // Fundamental para que el navegador permita Autoplay
+                        video.muted = true; 
                         video.playsInline = true;
                         video.play();
 
-                        // Convertirlo a textura de Three.js
                         const videoTexture = new THREE.VideoTexture(video);
                         videoTexture.colorSpace = THREE.SRGBColorSpace;
                         videoTexture.flipY = false;
                         texturas.push(videoTexture);
                     } else {
-                        // Carga de imagen normal
                         const texturaCarga = textureLoader.load(url, (txt) => {
                             txt.colorSpace = THREE.SRGBColorSpace;
                             txt.flipY = false; 
@@ -554,14 +532,12 @@ async function inicializarVisorColeccion(coleccion, id) {
                     const colorMagia = new THREE.Color(configNFT.emissiveColor);
                     
                     let particulasGeneradas = false;
-                    const posOriginal = model.position.clone();
 
                     function animarResplandor() {
                         const ahora = performance.now();
                         let t = (ahora - inicio) / duracion;
 
                         if (t >= 1) {
-                            model.position.copy(posOriginal); 
                             if (material.emissive) material.emissive.copy(emisionOriginal);
                             material.emissiveIntensity = intensidadOriginal;
                             
@@ -578,19 +554,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                         material.emissive.copy(colorMagia);
                         
                         material.emissiveIntensity = curvaLuz * (configNFT.magicTransitionEnabled ? configNFT.magicTransitionBloomStrength : configNFT.bloomStrength);
-
-                        if (t < 0.5) {
-                            const shakeFactor = configNFT.magicTransitionEnabled ? configNFT.magicTransitionShake : 0.03;
-                            const intensidadTemblor = Math.pow(t / 0.5, 2) * maxDim * shakeFactor; 
-                            
-                            model.position.set(
-                                posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
-                                posOriginal.y + (Math.random() - 0.5) * intensidadTemblor,
-                                posOriginal.z + (Math.random() - 0.5) * intensidadTemblor
-                            );
-                        } else {
-                            model.position.copy(posOriginal);
-                        }
 
                         if (t >= 0.5) {
                             if (material.map !== nuevaTextura) {
@@ -628,6 +591,10 @@ async function inicializarVisorColeccion(coleccion, id) {
                 iniciarEntradaMagica();
                 ocultarLoader();
                 
+                setTimeout(() => { 
+                    escucharAlCuadro(configNFT, model, camera, maxDim); 
+                }, 1500);
+                
             } else {
                 ocultarLoader();
             }
@@ -635,12 +602,11 @@ async function inicializarVisorColeccion(coleccion, id) {
         function (xhr) {}, 
         function (error) {
             console.error(`Error al cargar el modelo .glb: ${modelPath}`, error);
-            const textElement = document.querySelector('.loading-text');
+            const textElement = document.getElementById('loading-text-lore');
             if (textElement) textElement.innerText = `Error: No se pudo cargar '${coleccion}' (NFT #${id})`;
         }
     );
 
-    // Bucle de Animación
     function animate() {
         requestAnimationFrame(animate);
         controls.update(); 
@@ -697,4 +663,159 @@ async function inicializarVisorColeccion(coleccion, id) {
 
     window.addEventListener('resize', resizeViewer);
     resizeViewer();
+}
+
+async function escucharAlCuadro(configNFT, model, camera, maxDim) {
+    let cajaSubtitulos = document.getElementById('subtitulo-ia');
+    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
+
+    let isTextVisible = false;
+
+    if (!cajaSubtitulos) {
+        cajaSubtitulos = document.createElement('div');
+        cajaSubtitulos.id = 'subtitulo-ia';
+        
+        cajaSubtitulos.style.cssText = `
+            position: absolute; 
+            transform: translate(-50%, -50%); 
+            color: #ffffff; 
+            font-family: 'Times New Roman', serif;
+            font-size: 12px; 
+            font-style: italic;
+            letter-spacing: 1px;
+            text-align: center; 
+            width: max-content;
+            max-width: 80%; 
+            z-index: 1000;
+            pointer-events: none; 
+            text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
+            transition: opacity 0.5s ease-out;
+            opacity: 0;
+        `;
+        document.body.appendChild(cajaSubtitulos);
+    }
+
+    function animarTemblorIA() {
+        const duracion = 350; 
+        const inicio = performance.now();
+        const posOriginal = model.position.clone();
+        const shakeFactor = configNFT.magicTransitionShake || 0.03; 
+
+        function animar() {
+            const ahora = performance.now();
+            let t = (ahora - inicio) / duracion;
+
+            if (t >= 1) {
+                model.position.copy(posOriginal); 
+                return;
+            }
+
+            const intensidadTemblor = (1 - t) * maxDim * shakeFactor; 
+            
+            model.position.set(
+                posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
+                posOriginal.y + (Math.random() - 0.5) * intensidadTemblor,
+                posOriginal.z + (Math.random() - 0.5) * intensidadTemblor
+            );
+
+            requestAnimationFrame(animar);
+        }
+        animar();
+    }
+
+    function rastrearModelo() {
+        if (model && camera && cajaSubtitulos) {
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            
+            const pos = new THREE.Vector3(
+                center.x, 
+                center.y - (size.y / 2) - (size.y * 0.10), 
+                center.z
+            );
+            
+            pos.project(camera);
+
+            if (pos.z > 1 || !isTextVisible) { 
+                cajaSubtitulos.style.opacity = '0';
+            } else {
+                cajaSubtitulos.style.opacity = '1';
+                const x = (pos.x * .5 + .5) * window.innerWidth;
+                const y = (pos.y * -.5 + .5) * window.innerHeight;
+                cajaSubtitulos.style.left = `${x}px`;
+                cajaSubtitulos.style.top = `${y}px`;
+            }
+        }
+        requestAnimationFrame(rastrearModelo);
+    }
+    
+    rastrearModelo();
+
+    const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
+
+    async function invocarMenteIA() {
+        try {
+            const respuesta = await fetch(URL_PUENTE, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json" 
+                },
+                body: JSON.stringify({
+                    model: "openai/gpt-oss-120b", 
+                    messages: [
+                        { 
+                            role: "system", 
+                            content: `Eres una inteligencia artificial atrapada en un cuadro. 
+                            Identidad: ${configNFT.ai_identity}. 
+                            Descripción de tu ser: ${configNFT.ai_description}.
+                            Personalidad: ${configNFT.ai_personality}. 
+                            Naturaleza y Moralidad: Eres una IA de tipo ${configNFT.ai_alignment}. Actúa estrictamente bajo esa moral.
+                            [DATOS TÉCNICOS DE TU PRISIÓN DIGITAL]
+                            Arquitectura IA: ${configNFT.ai_architecture}
+                            Nivel de Encriptación: ${configNFT.ai_encryption}
+                            Edicion: ${configNFT.ai_generation}
+                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante, teniendo en cuenta tu naturaleza digital y encriptada. 
+                            REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
+                            REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.` 
+                        },
+                        {
+                            role: "user",
+                            content: `Un espectador te mira. Di tu línea de texto ahora.`
+                        }
+                    ],
+                    temperature: 0.7, 
+                    max_tokens: 1024
+                }),
+            });
+
+            if (!respuesta.ok) throw new Error("Conexión rechazada");
+            
+            const datos = await respuesta.json();
+
+            if (datos.error) return;
+
+            let textoIA = datos.choices[0].message.content.trim();
+            textoIA = textoIA.replace(/^["']|["']$/g, '');
+
+            if (textoIA === "") {
+                textoIA = "... (El ente te observa en un silencio sepulcral) ...";
+            }
+
+            cajaSubtitulos.innerText = textoIA;
+            isTextVisible = true; 
+            
+            animarTemblorIA();
+
+            setTimeout(() => {
+                isTextVisible = false; 
+            }, 10000); 
+
+        } catch (error) {
+            console.error("Falla en la IA:", error);
+        }
+    }
+
+    invocarMenteIA();
+    setInterval(invocarMenteIA, 30000);
 }
