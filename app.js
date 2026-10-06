@@ -155,6 +155,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_awareness: 'Desorientada',
             ai_language: 'Español',
             ai_alignment: 'Neutral',
+            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
             ai_architecture: 'Corrupta',
             ai_encryption: 'Fragmentada',
             ai_description: 'Archivos dañados.',
@@ -761,7 +762,7 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                     "Content-Type": "application/json" 
                 },
                 body: JSON.stringify({
-                    model: "llama3-70b-8192", 
+                    model: "openai/gpt-oss-120b", 
                     messages: [
                         { 
                             role: "system", 
