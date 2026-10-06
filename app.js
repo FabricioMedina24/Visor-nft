@@ -752,7 +752,7 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
     
     rastrearModelo();
 
-    const URL_PUENTE = 'https://puente-ia-galeria.fabriciomedina1000.workers.dev'; 
+    const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
 
     async function invocarMenteIA() {
         try {
