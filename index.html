@@ -44,19 +44,23 @@
             border-radius: 2px;
         }
 
+        /* --- BARRA DE CARGA QUE SE COMPLETA --- */
         .golden-bar {
-            width: 40%;
+            width: 0%;
             height: 100%;
             background: #ffd700;
             position: absolute;
-            left: -50%;
+            left: 0;
             box-shadow: 0 0 10px #ffd700, 0 0 20px #ffaa00;
-            animation: cargaDorada 1.2s infinite ease-in-out;
+            /* Dura 12 segundos, empieza rápido y se frena al final (simulando carga real) */
+            animation: completarBarra 12s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
         }
 
-        @keyframes cargaDorada {
-            0% { left: -50%; }
-            100% { left: 100%; }
+        @keyframes completarBarra {
+            0% { width: 0%; }
+            30% { width: 50%; }
+            60% { width: 80%; }
+            100% { width: 98%; } /* Se queda esperando a que el JavaScript la oculte */
         }
 
         #loading-text-lore {
