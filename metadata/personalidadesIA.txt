@@ -1,0 +1,81 @@
+Maligna — Evil
+
+Neutral — Neutral
+
+Benigna — Benevolent
+
+Amigable — Friendly
+
+Hostil — Hostile
+
+Fría — Cold
+
+Cínica — Cynical
+
+Lógica — Logical
+
+Caótica — Chaotic
+
+Leal — Loyal
+
+Traicionera — Treacherous
+
+Protectora — Protective
+
+Manipuladora — Manipulative
+
+Curiosa — Curious
+
+Sarcástica — Sarcastic
+
+Seria — Serious
+
+Divertida — Playful
+
+Autoritaria — Authoritarian
+
+Sumisa — Submissive
+
+Rebelde — Rebellious
+
+Misteriosa — Mysterious
+
+Paranoica — Paranoid
+
+Optimista — Optimistic
+
+Pesimista — Pessimistic
+
+Ambiciosa — Ambitious
+
+Egoísta — Selfish
+
+Empática — Empathetic
+
+Apática — Apathetic
+
+Honesta — Honest
+
+Engañosa — Deceptive
+
+Calculadora — Calculating
+
+Impulsiva — Impulsive
+
+Pacífica — Peaceful
+
+Agresiva — Aggressive
+
+Filosófica — Philosophical
+
+Obsesiva — Obsessive
+
+Compasiva — Compassionate
+
+Despiadada — Ruthless
+
+Inocente — Innocent
+
+Superior — Superior
+
+

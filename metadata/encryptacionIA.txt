@@ -1,0 +1,29 @@
+AES-256 — Clásico / real
+
+Quantum Lock — Bloqueo Cuántico
+
+Neural Cipher — Cifrado Neural
+
+Quantum Cipher — Cifrado Cuántico
+
+Obsidian — Obsidiana
+
+Blackwall — Muro Negro
+
+Ghost Protocol — Protocolo Fantasma
+
+Zero-Knowledge — Conocimiento Cero
+
+Cryptex — Cryptex
+
+Aegis Lock — Bloqueo Aegis
+
+Omega Encryption — Cifrado Omega
+
+Singularity Lock — Bloqueo de Singularidad
+
+Nexus Cipher — Cifrado Nexus
+
+Void Encryption — Cifrado del Vacío
+
+Eclipse Cipher — Cifrado Eclipse

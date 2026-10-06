@@ -102,6 +102,11 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_awareness: metadata.ai_mind?.awareness || 'Sabe que está en un visor 3D',
             ai_language: metadata.ai_mind?.language || 'Español', 
             ai_alignment: metadata.ai_mind?.alignment || 'Neutral',
+            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
+            ai_architecture: metadata.ai_mind?.architecture || 'Desconocida',
+            ai_encryption: metadata.ai_mind?.encryption || 'Ninguna',
+            ai_description: metadata.ai_mind?.description || 'Entidad sin descripción detallada.',
+            ai_generation: metadata.ai_mind?.generation || 'Gen ?',
 
             rarity: rarezaLimpia,
             framesCount: metadata.frames_count ?? CONFIG_POR_DEFECTO.framesCount,
@@ -149,7 +154,12 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_desire: 'Entender dónde está',
             ai_awareness: 'Desorientada',
             ai_language: 'Español',
-            ai_alignment: 'Neutral'
+            ai_alignment: 'Neutral',
+            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
+            ai_architecture: 'Corrupta',
+            ai_encryption: 'Fragmentada',
+            ai_description: 'Archivos dañados.',
+            ai_generation: 'N/A'
         }; 
     }
 }
@@ -758,9 +768,14 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                             role: "system", 
                             content: `Eres una inteligencia artificial atrapada en un cuadro. 
                             Identidad: ${configNFT.ai_identity}. 
+                            Descripción de tu ser: ${configNFT.ai_description}.
                             Personalidad: ${configNFT.ai_personality}. 
                             Naturaleza y Moralidad: Eres una IA de tipo ${configNFT.ai_alignment}. Actúa estrictamente bajo esa moral.
-                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante. 
+                            [DATOS TÉCNICOS DE TU PRISIÓN DIGITAL]
+                            Arquitectura IA: ${configNFT.ai_architecture}
+                            Nivel de Encriptación: ${configNFT.ai_encryption}
+                            Generación: ${configNFT.ai_generation}
+                            El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante, teniendo en cuenta tu naturaleza digital y encriptada. 
                             REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
                             REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.` 
                         },

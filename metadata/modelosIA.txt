@@ -1,0 +1,62 @@
+ORACLE → PROGNOSIS
+
+ARCHITECT → CORTEX
+
+ANALYST → DATAMIND
+
+GENERATOR → FORGE
+
+PREDICTOR → PROPHET
+
+STRATEGIST → WARCORE
+
+OBSERVER → SPECTRA
+
+CONTROLLER → DOMINION
+
+SOLVER → AXIOM
+
+SYNTHESIZER → SYNTHESIS
+
+INTERPRETER → DECODER
+
+SIMULATOR → VIRTUALIS
+
+OPTIMIZER → MAXIMUS
+
+NAVIGATOR → PATHFINDER
+
+SENTINEL → AEGIS
+
+***************************
+ESPAÑOL                   *
+***************************
+PROGNOSIS — Oráculo
+
+CORTEX — Arquitecto
+
+DATAMIND — Analista
+
+FORGE — Generador
+
+PROPHET — Predictor
+
+WARCORE — Estratega
+
+SPECTRA — Observador
+
+DOMINION — Controlador
+
+AXIOM — Solucionador
+
+SYNTHESIS — Sintetizador
+
+DECODER — Intérprete
+
+VIRTUALIS — Simulador
+
+MAXIMUS — Optimizador
+
+PATHFINDER — Navegador
+
+AEGIS — Centinela
