@@ -752,7 +752,7 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
     
     rastrearModelo();
 
-    const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
+    const URL_PUENTE = 'https://puente-ia-galeria.fabriciomedina1000.workers.dev'; 
 
     async function invocarMenteIA() {
         try {
@@ -774,7 +774,7 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                             [DATOS TÉCNICOS DE TU PRISIÓN DIGITAL]
                             Arquitectura IA: ${configNFT.ai_architecture}
                             Nivel de Encriptación: ${configNFT.ai_encryption}
-                            Generación: ${configNFT.ai_generation}
+                            Edicion: ${configNFT.ai_generation}
                             El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante, teniendo en cuenta tu naturaleza digital y encriptada. 
                             REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
                             REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.` 
