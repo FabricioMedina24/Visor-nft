@@ -100,6 +100,8 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_personality: metadata.ai_mind?.personality || 'Poética, errática y con necesidad de atención',
             ai_desire: metadata.ai_mind?.desire || 'Ser escuchada',
             ai_awareness: metadata.ai_mind?.awareness || 'Sabe que está en un visor 3D',
+            ai_language: metadata.ai_mind?.language || 'Español', 
+            ai_alignment: metadata.ai_mind?.alignment || 'Neutral',
 
             rarity: rarezaLimpia,
             framesCount: metadata.frames_count ?? CONFIG_POR_DEFECTO.framesCount,
@@ -145,7 +147,9 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_identity: 'Fragmento corrupto',
             ai_personality: 'Confundida y balbuceante',
             ai_desire: 'Entender dónde está',
-            ai_awareness: 'Desorientada'
+            ai_awareness: 'Desorientada',
+            ai_language: 'Español',
+            ai_alignment: 'Neutral'
         }; 
     }
 }
@@ -753,9 +757,12 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                         { 
                             role: "system", 
                             content: `Eres una inteligencia artificial atrapada en un cuadro. 
-                            Identidad: ${configNFT.ai_identity}. Personalidad: ${configNFT.ai_personality}. 
+                            Identidad: ${configNFT.ai_identity}. 
+                            Personalidad: ${configNFT.ai_personality}. 
+                            Naturaleza y Moralidad: Eres una IA de tipo ${configNFT.ai_alignment}. Actúa estrictamente bajo esa moral.
                             El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante. 
-                            REGLA ESTRICTA: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).` 
+                            REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
+                            REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.` 
                         },
                         {
                             role: "user",
