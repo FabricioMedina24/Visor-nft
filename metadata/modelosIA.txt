@@ -29,7 +29,7 @@ NAVIGATOR → PATHFINDER
 SENTINEL → AEGIS
 
 ***************************
-ESPAÑOL                   *
+*         ESPAÑOL         *
 ***************************
 PROGNOSIS — Oráculo
 
