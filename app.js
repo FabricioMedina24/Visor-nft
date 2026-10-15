@@ -102,6 +102,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_awareness: metadata.ai_mind?.awareness || 'Sabe que está en un visor 3D',
             ai_language: metadata.ai_mind?.language || 'Español', 
             ai_alignment: metadata.ai_mind?.alignment || 'Neutral',
+            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
             ai_architecture: metadata.ai_mind?.architecture || 'Desconocida',
             ai_encryption: metadata.ai_mind?.encryption || 'Ninguna',
             ai_description: metadata.ai_mind?.description || 'Entidad sin descripción detallada.',
@@ -154,6 +155,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_awareness: 'Desorientada',
             ai_language: 'Español',
             ai_alignment: 'Neutral',
+            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
             ai_architecture: 'Corrupta',
             ai_encryption: 'Fragmentada',
             ai_description: 'Archivos dañados.',
@@ -667,135 +669,33 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 async function escucharAlCuadro(configNFT, model, camera, maxDim) {
-    const hexMagia = '#' + configNFT.emissiveColor.toString(16).padStart(6, '0');
+    let cajaSubtitulos = document.getElementById('subtitulo-ia');
+    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
 
-    // 1. Buscar el nodo LIENZO para anclar el texto
-    let lienzo = null;
-    const nodoLienzo = model.getObjectByName('LIENZO');
-    if (nodoLienzo) {
-        nodoLienzo.traverse((child) => {
-            if (child.isMesh && child.material) lienzo = child;
-        });
-    }
+    let isTextVisible = false;
 
-    if (!lienzo) {
-        console.warn("No se encontró el LIENZO para colocar los subtítulos en 3D.");
-        return;
-    }
-
-    // 2. Crear un canvas 2D oculto para dibujar el texto
-    const canvasTexto = document.createElement('canvas');
-    canvasTexto.width = 1024;
-    canvasTexto.height = 300; // Ampliado para asegurar que quepan varias líneas
-    const ctx = canvasTexto.getContext('2d');
-
-    // 3. Crear la textura y el material 3D
-    const texturaTexto = new THREE.CanvasTexture(canvasTexto);
-    texturaTexto.colorSpace = THREE.SRGBColorSpace;
-    texturaTexto.minFilter = THREE.LinearFilter;
-    
-    // MEJORA: Se añade polygonOffset para forzar que se dibuje SOBRE el lienzo
-    const materialTexto = new THREE.MeshBasicMaterial({
-        map: texturaTexto,
-        transparent: true,
-        opacity: 0,
-        depthWrite: false,
-        polygonOffset: true,
-        polygonOffsetFactor: -4,
-        polygonOffsetUnits: -4
-    });
-
-    // 4. Calcular el tamaño del lienzo para posicionar el plano
-    const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
-    const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
-
-    // Crear la malla del texto adaptada a la proporción del canvas
-    const altoPlano = (tamanoLienzo.x * 0.9) * (300 / 1024);
-    const geometriaTexto = new THREE.PlaneGeometry(tamanoLienzo.x * 0.9, altoPlano);
-    const mallaTexto = new THREE.Mesh(geometriaTexto, materialTexto);
-
-    // Empujamos en Z usando el grosor del lienzo + margen
-    const grosorZ = (tamanoLienzo.z / 2) + 0.15; 
-    
-    mallaTexto.position.set(
-        0, 
-        (-tamanoLienzo.y / 2) + (altoPlano / 1.5), // Posición ajustada a la zona inferior del cuadro
-        grosorZ 
-    );
-    
-    // Anclar el plano 3D directamente al lienzo
-    lienzo.add(mallaTexto);
-
-    // Función para actualizar el texto en el Canvas 2D
-    function actualizarTexto(texto) {
-        ctx.clearRect(0, 0, canvasTexto.width, canvasTexto.height);
+    if (!cajaSubtitulos) {
+        cajaSubtitulos = document.createElement('div');
+        cajaSubtitulos.id = 'subtitulo-ia';
         
-        ctx.font = "italic 42px 'Times New Roman', serif"; // Tamaño de letra ajustado
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-
-        const maxWidth = canvasTexto.width * 0.9;
-        let words = texto.split(' ');
-        let line = '';
-        let lines = [];
-
-        for(let n = 0; n < words.length; n++) {
-            let testLine = line + words[n] + ' ';
-            let metrics = ctx.measureText(testLine);
-            let testWidth = metrics.width;
-            if (testWidth > maxWidth && n > 0) {
-                lines.push(line);
-                line = words[n] + ' ';
-            } else {
-                line = testLine;
-            }
-        }
-        lines.push(line);
-
-        let lineHeight = 50;
-        let startY = (canvasTexto.height / 2) - ((lines.length - 1) * lineHeight) / 2;
-
-        ctx.fillStyle = '#ffffff'; 
-
-        lines.forEach((l, i) => {
-            let yPos = startY + (i * lineHeight);
-            
-            // Resplandor
-            ctx.shadowColor = hexMagia;
-            ctx.shadowBlur = 20;
-            ctx.fillText(l.trim(), canvasTexto.width / 2, yPos);
-            
-            // Texto principal
-            ctx.shadowBlur = 0; 
-            ctx.fillText(l.trim(), canvasTexto.width / 2, yPos);
-        });
-
-        texturaTexto.needsUpdate = true;
-    }
-
-    let transicionOpacidad = null;
-
-    function mostrarTexto() {
-        if (transicionOpacidad) clearInterval(transicionOpacidad);
-        mallaTexto.material.opacity = 0;
-        transicionOpacidad = setInterval(() => {
-            mallaTexto.material.opacity += 0.05;
-            if (mallaTexto.material.opacity >= 1) {
-                mallaTexto.material.opacity = 1;
-                clearInterval(transicionOpacidad);
-            }
-        }, 50);
-    }
-
-    function ocultarTexto() {
-        if (transicionOpacidad) clearInterval(transicionOpacidad);
-        transicionOpacidad = setInterval(() => {
-            mallaTexto.material.opacity -= 0.05;
-            if (mallaTexto.material.opacity <= 0) {
-                mallaTexto.material.opacity = 0;
-                clearInterval(transicionOpacidad);
-            }
-        }, 50);
+        cajaSubtitulos.style.cssText = `
+            position: absolute; 
+            transform: translate(-50%, -50%); 
+            color: #ffffff; 
+            font-family: 'Times New Roman', serif;
+            font-size: 12px; 
+            font-style: italic;
+            letter-spacing: 1px;
+            text-align: center; 
+            width: max-content;
+            max-width: 80%; 
+            z-index: 1000;
+            pointer-events: none; 
+            text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
+            transition: opacity 0.5s ease-out;
+            opacity: 0;
+        `;
+        document.body.appendChild(cajaSubtitulos);
     }
 
     function animarTemblorIA() {
@@ -825,6 +725,35 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
         }
         animar();
     }
+
+    function rastrearModelo() {
+        if (model && camera && cajaSubtitulos) {
+            const box = new THREE.Box3().setFromObject(model);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+            
+            const pos = new THREE.Vector3(
+                center.x, 
+                center.y - (size.y / 2) - (size.y * 0.10), 
+                center.z
+            );
+            
+            pos.project(camera);
+
+            if (pos.z > 1 || !isTextVisible) { 
+                cajaSubtitulos.style.opacity = '0';
+            } else {
+                cajaSubtitulos.style.opacity = '1';
+                const x = (pos.x * .5 + .5) * window.innerWidth;
+                const y = (pos.y * -.5 + .5) * window.innerHeight;
+                cajaSubtitulos.style.left = `${x}px`;
+                cajaSubtitulos.style.top = `${y}px`;
+            }
+        }
+        requestAnimationFrame(rastrearModelo);
+    }
+    
+    rastrearModelo();
 
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
 
@@ -876,12 +805,13 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                 textoIA = "... (El ente te observa en un silencio sepulcral) ...";
             }
 
-            actualizarTexto(textoIA);
-            mostrarTexto();
+            cajaSubtitulos.innerText = textoIA;
+            isTextVisible = true; 
+            
             animarTemblorIA();
 
             setTimeout(() => {
-                ocultarTexto();
+                isTextVisible = false; 
             }, 10000); 
 
         } catch (error) {
