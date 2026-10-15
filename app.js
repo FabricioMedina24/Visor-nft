@@ -95,6 +95,7 @@ async function obtenerConfiguracionNFT(coleccion, id) {
 
         return {
             titulo: metadata.title || 'Asset Desconocido',
+           
             ai_identity: metadata.ai_mind?.identity || 'Entidad digital genérica',
             ai_personality: metadata.ai_mind?.personality || 'Poética, errática y con necesidad de atención',
             ai_desire: metadata.ai_mind?.desire || 'Ser escuchada',
@@ -397,6 +398,7 @@ async function inicializarVisorColeccion(coleccion, id) {
                     if (window.loaderInterval) {
                         clearInterval(window.loaderInterval);
                     }
+                    loaderContainer.style.pointerEvents = 'none';
                     loaderContainer.style.opacity = '0';
                     setTimeout(() => loaderContainer.remove(), 500);
                 }
@@ -592,7 +594,6 @@ async function inicializarVisorColeccion(coleccion, id) {
                 iniciarEntradaMagica();
                 ocultarLoader();
                
-                // Pasamos también 'lienzo' para adherir los subtítulos directamente sobre él
                 setTimeout(() => {
                     escucharAlCuadro(configNFT, model, lienzo, maxDim);
                 }, 1500);
@@ -668,14 +669,14 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// SUBTÍTULOS INTEGRADOS EN EL LIENZO 3D SOBRE EL VIDEO
+// SUBTÍTULOS INTEGRADOS EN EL LIENZO 3D (SIN FONDO + EFECTO ESCRITURA)
 // =========================================================================
 async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     if (!lienzo) return;
 
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
 
-    // 1. Crear Canvas 2D de alta resolución para renderizar los subtítulos
+    // 1. Crear Canvas 2D transparente para renderizar los subtítulos
     const canvasSub = document.createElement('canvas');
     canvasSub.width = 1024;
     canvasSub.height = 512;
@@ -688,7 +689,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     // 2. Calcular dimensiones del lienzo en coordenadas locales de 'model'
     const rotacionActual = model.rotation.y;
-    model.rotation.y = 0; // Alinear temporalmente para medir sin distorsión de rotación
+    model.rotation.y = 0;
     model.updateMatrixWorld(true);
 
     const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
@@ -713,12 +714,11 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
         transparent: true,
         opacity: 0,
         depthWrite: false,
-        toneMapped: false // Evita que el bloom excesivo queme y haga ilegible la letra blanca
+        toneMapped: false
     });
 
     const mallaSubtitulos = new THREE.Mesh(geoSubtitulos, matSubtitulos);
 
-    // Posicionar en el tercio inferior del lienzo, apenas por delante de la superficie del video
     mallaSubtitulos.position.set(
         centroLocal.x,
         centroLocal.y - (altoLocal * 0.32),
@@ -727,19 +727,16 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     model.add(mallaSubtitulos);
 
-    // 4. Función para dibujar el texto con salto de línea automático (word wrap) sobre el Canvas
-    function escribirSubtituloEnLienzo(texto) {
-        ctx.clearRect(0, 0, canvasSub.width, canvasSub.height);
+    // 4. Dividir el texto completo en líneas fijas para que no salten al escribirse
+    const fontSize = 38;
+    const lineHeight = fontSize * 1.35;
 
-        const fontSize = 38;
+    function calcularLineas(textoCompleto) {
+        ctx.save();
         ctx.font = `italic ${fontSize}px "Times New Roman", serif`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
         const maxWidth = canvasSub.width * 0.88;
-        const lineHeight = fontSize * 1.35;
 
-        const palabras = texto.split(' ');
+        const palabras = textoCompleto.split(' ');
         const lineas = [];
         let lineaActual = '';
 
@@ -754,47 +751,83 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
             }
         }
         lineas.push(lineaActual.trim());
+        ctx.restore();
+        return lineas;
+    }
 
-        const altoTotalTexto = lineas.length * lineHeight;
-        // Ubicamos las líneas hacia el borde inferior del canvas
+    // 5. Dibujar únicamente los caracteres revelados hasta el momento (sin ningún fondo)
+    function renderizarFrameTexto(lineasCompletas, caracteresMostrados) {
+        ctx.clearRect(0, 0, canvasSub.width, canvasSub.height);
+
+        ctx.save();
+        ctx.font = `italic ${fontSize}px "Times New Roman", serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const altoTotalTexto = lineasCompletas.length * lineHeight;
         const startY = canvasSub.height - altoTotalTexto - 40;
 
-        // Fondo oscuro suave degradado detrás del subtítulo para garantizar contraste sobre el video
-        const paddingY = 20;
-        const bgY = startY - (lineHeight / 2) - paddingY;
-        const bgHeight = altoTotalTexto + (paddingY * 2);
+        let restantes = caracteresMostrados;
 
-        const grad = ctx.createLinearGradient(0, bgY, 0, bgY + bgHeight);
-        grad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        grad.addColorStop(0.2, 'rgba(0, 0, 0, 0.68)');
-        grad.addColorStop(0.8, 'rgba(0, 0, 0, 0.68)');
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        for (let index = 0; index < lineasCompletas.length; index++) {
+            if (restantes <= 0) break;
 
-        ctx.fillStyle = grad;
-        ctx.fillRect(canvasSub.width * 0.04, bgY, canvasSub.width * 0.92, bgHeight);
+            const lineaOriginal = lineasCompletas[index];
+            const textoParcial = lineaOriginal.substring(0, restantes);
+            restantes -= lineaOriginal.length;
 
-        // Dibujar cada línea con resplandor del color mágico y borde negro de lectura
-        lineas.forEach((linea, index) => {
             const y = startY + (index * lineHeight);
 
-            // Borde oscuro nítido tipo subtítulo de cine
+            // Contorno negro nítido para separar la letra del video sin usar caja de fondo
             ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
-            ctx.lineWidth = 7;
+            ctx.lineWidth = 8;
             ctx.lineJoin = 'round';
-            ctx.strokeText(linea, canvasSub.width / 2, y);
+            ctx.strokeText(textoParcial, canvasSub.width / 2, y);
 
-            // Resplandor mágico + Relleno blanco
+            // Relleno blanco con resplandor del color mágico del NFT
             ctx.shadowColor = `#${hexMagia}`;
-            ctx.shadowBlur = 16;
+            ctx.shadowBlur = 15;
             ctx.fillStyle = '#ffffff';
-            ctx.fillText(linea, canvasSub.width / 2, y);
-        });
+            ctx.fillText(textoParcial, canvasSub.width / 2, y);
+        }
 
+        ctx.restore();
         texturaSubtitulos.needsUpdate = true;
     }
 
-    // 5. Función para animar suavemente la aparición y desaparición (Fade In / Fade Out)
+    // 6. Animación de máquina de escribir (Typewriter)
+    let intervaloEscritura = null;
+    let timeoutOcultar = null;
+
+    function escribirConEfecto(textoCompleto, velocidadMs = 55) {
+        if (intervaloEscritura) clearInterval(intervaloEscritura);
+        if (timeoutOcultar) clearTimeout(timeoutOcultar);
+
+        const lineasCompletas = calcularLineas(textoCompleto);
+        const totalCaracteres = lineasCompletas.reduce((acc, linea) => acc + linea.length, 0);
+        let caracteresActuales = 0;
+
+        animarOpacidadSubtitulo(1, 200);
+        renderizarFrameTexto(lineasCompletas, 0);
+
+        intervaloEscritura = setInterval(() => {
+            caracteresActuales++;
+            renderizarFrameTexto(lineasCompletas, caracteresActuales);
+
+            if (caracteresActuales >= totalCaracteres) {
+                clearInterval(intervaloEscritura);
+                intervaloEscritura = null;
+
+                timeoutOcultar = setTimeout(() => {
+                    animarOpacidadSubtitulo(0, 800);
+                }, 8000);
+            }
+        }, velocidadMs);
+    }
+
+    // 7. Animación suave de opacidad (Fade Out al terminar)
     let idAnimacionOpacidad = null;
     function animarOpacidadSubtitulo(opacidadDestino, duracion = 500) {
         if (idAnimacionOpacidad) cancelAnimationFrame(idAnimacionOpacidad);
@@ -842,7 +875,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     }
 
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev';
-    let timeoutOcultar = null;
 
     async function invocarMenteIA() {
         try {
@@ -892,14 +924,8 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
                 textoIA = "... (El ente te observa en un silencio sepulcral) ...";
             }
 
-            escribirSubtituloEnLienzo(textoIA);
-            animarOpacidadSubtitulo(1, 500);
             animarTemblorIA();
-
-            if (timeoutOcultar) clearTimeout(timeoutOcultar);
-            timeoutOcultar = setTimeout(() => {
-                animarOpacidadSubtitulo(0, 600);
-            }, 10000);
+            escribirConEfecto(textoIA, 55);
 
         } catch (error) {
             console.error("Falla en la IA:", error);
