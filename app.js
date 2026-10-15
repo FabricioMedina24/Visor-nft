@@ -102,7 +102,6 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_awareness: metadata.ai_mind?.awareness || 'Sabe que está en un visor 3D',
             ai_language: metadata.ai_mind?.language || 'Español', 
             ai_alignment: metadata.ai_mind?.alignment || 'Neutral',
-            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
             ai_architecture: metadata.ai_mind?.architecture || 'Desconocida',
             ai_encryption: metadata.ai_mind?.encryption || 'Ninguna',
             ai_description: metadata.ai_mind?.description || 'Entidad sin descripción detallada.',
@@ -155,7 +154,6 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             ai_awareness: 'Desorientada',
             ai_language: 'Español',
             ai_alignment: 'Neutral',
-            // NUEVOS CAMPOS AÑADIDOS AQUÍ:
             ai_architecture: 'Corrupta',
             ai_encryption: 'Fragmentada',
             ai_description: 'Archivos dañados.',
@@ -669,33 +667,132 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 async function escucharAlCuadro(configNFT, model, camera, maxDim) {
-    let cajaSubtitulos = document.getElementById('subtitulo-ia');
-    const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
+    const hexMagia = '#' + configNFT.emissiveColor.toString(16).padStart(6, '0');
 
-    let isTextVisible = false;
+    // 1. Buscar el nodo LIENZO para anclar el texto
+    let lienzo = null;
+    const nodoLienzo = model.getObjectByName('LIENZO');
+    if (nodoLienzo) {
+        nodoLienzo.traverse((child) => {
+            if (child.isMesh && child.material) lienzo = child;
+        });
+    }
 
-    if (!cajaSubtitulos) {
-        cajaSubtitulos = document.createElement('div');
-        cajaSubtitulos.id = 'subtitulo-ia';
+    if (!lienzo) {
+        console.warn("No se encontró el LIENZO para colocar los subtítulos.");
+        return;
+    }
+
+    // 2. Crear un canvas 2D oculto para dibujar el texto
+    const canvasTexto = document.createElement('canvas');
+    canvasTexto.width = 1024;
+    canvasTexto.height = 256;
+    const ctx = canvasTexto.getContext('2d');
+
+    // 3. Crear la textura y el material 3D
+    const texturaTexto = new THREE.CanvasTexture(canvasTexto);
+    texturaTexto.colorSpace = THREE.SRGBColorSpace;
+    texturaTexto.minFilter = THREE.LinearFilter;
+    
+    const materialTexto = new THREE.MeshBasicMaterial({
+        map: texturaTexto,
+        transparent: true,
+        opacity: 0,
+        depthWrite: false
+    });
+
+    // 4. Calcular el tamaño del lienzo para posicionar el plano
+    const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
+    const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
+    const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
+
+    // Crear la malla del texto adaptada al ancho del lienzo
+    const geometriaTexto = new THREE.PlaneGeometry(tamanoLienzo.x * 0.9, tamanoLienzo.x * 0.22);
+    const mallaTexto = new THREE.Mesh(geometriaTexto, materialTexto);
+
+    // Posicionar en la parte inferior del lienzo, ligeramente hacia adelante en Z para que no se solape
+    mallaTexto.position.set(
+        0, 
+        (-tamanoLienzo.y / 2) + (tamanoLienzo.y * 0.1), 
+        0.02 
+    );
+    
+    // Anclar el plano 3D directamente al lienzo
+    lienzo.add(mallaTexto);
+
+    // Función para actualizar el texto en el Canvas 2D con salto de línea automático
+    function actualizarTexto(texto) {
+        ctx.clearRect(0, 0, canvasTexto.width, canvasTexto.height);
         
-        cajaSubtitulos.style.cssText = `
-            position: absolute; 
-            transform: translate(-50%, -50%); 
-            color: #ffffff; 
-            font-family: 'Times New Roman', serif;
-            font-size: 12px; 
-            font-style: italic;
-            letter-spacing: 1px;
-            text-align: center; 
-            width: max-content;
-            max-width: 80%; 
-            z-index: 1000;
-            pointer-events: none; 
-            text-shadow: 0 0 8px #${hexMagia}, 0 0 15px #${hexMagia}, 1px 1px 3px rgba(0,0,0,1);
-            transition: opacity 0.5s ease-out;
-            opacity: 0;
-        `;
-        document.body.appendChild(cajaSubtitulos);
+        ctx.font = "italic 48px 'Times New Roman', serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        const maxWidth = canvasTexto.width * 0.9;
+        let words = texto.split(' ');
+        let line = '';
+        let lines = [];
+
+        // Generar líneas según el ancho máximo permitido
+        for(let n = 0; n < words.length; n++) {
+            let testLine = line + words[n] + ' ';
+            let metrics = ctx.measureText(testLine);
+            let testWidth = metrics.width;
+            if (testWidth > maxWidth && n > 0) {
+                lines.push(line);
+                line = words[n] + ' ';
+            } else {
+                line = testLine;
+            }
+        }
+        lines.push(line);
+
+        // Altura de línea y punto de inicio vertical
+        let lineHeight = 55;
+        let startY = (canvasTexto.height / 2) - ((lines.length - 1) * lineHeight) / 2;
+
+        ctx.fillStyle = '#ffffff'; 
+
+        // Dibujar cada línea iterando el arreglo
+        lines.forEach((l, i) => {
+            let yPos = startY + (i * lineHeight);
+            
+            // Pasada 1: Resplandor mágico fuerte
+            ctx.shadowColor = hexMagia;
+            ctx.shadowBlur = 20;
+            ctx.fillText(l.trim(), canvasTexto.width / 2, yPos);
+            
+            // Pasada 2: Texto nítido encima
+            ctx.shadowBlur = 0; 
+            ctx.fillText(l.trim(), canvasTexto.width / 2, yPos);
+        });
+
+        texturaTexto.needsUpdate = true;
+    }
+
+    let transicionOpacidad = null;
+
+    function mostrarTexto() {
+        if (transicionOpacidad) clearInterval(transicionOpacidad);
+        mallaTexto.material.opacity = 0;
+        transicionOpacidad = setInterval(() => {
+            mallaTexto.material.opacity += 0.05;
+            if (mallaTexto.material.opacity >= 1) {
+                mallaTexto.material.opacity = 1;
+                clearInterval(transicionOpacidad);
+            }
+        }, 50);
+    }
+
+    function ocultarTexto() {
+        if (transicionOpacidad) clearInterval(transicionOpacidad);
+        transicionOpacidad = setInterval(() => {
+            mallaTexto.material.opacity -= 0.05;
+            if (mallaTexto.material.opacity <= 0) {
+                mallaTexto.material.opacity = 0;
+                clearInterval(transicionOpacidad);
+            }
+        }, 50);
     }
 
     function animarTemblorIA() {
@@ -726,44 +823,13 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
         animar();
     }
 
-    function rastrearModelo() {
-        if (model && camera && cajaSubtitulos) {
-            const box = new THREE.Box3().setFromObject(model);
-            const size = box.getSize(new THREE.Vector3());
-            const center = box.getCenter(new THREE.Vector3());
-            
-            const pos = new THREE.Vector3(
-                center.x, 
-                center.y - (size.y / 2) - (size.y * 0.10), 
-                center.z
-            );
-            
-            pos.project(camera);
-
-            if (pos.z > 1 || !isTextVisible) { 
-                cajaSubtitulos.style.opacity = '0';
-            } else {
-                cajaSubtitulos.style.opacity = '1';
-                const x = (pos.x * .5 + .5) * window.innerWidth;
-                const y = (pos.y * -.5 + .5) * window.innerHeight;
-                cajaSubtitulos.style.left = `${x}px`;
-                cajaSubtitulos.style.top = `${y}px`;
-            }
-        }
-        requestAnimationFrame(rastrearModelo);
-    }
-    
-    rastrearModelo();
-
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev'; 
 
     async function invocarMenteIA() {
         try {
             const respuesta = await fetch(URL_PUENTE, {
                 method: "POST",
-                headers: { 
-                    "Content-Type": "application/json" 
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     model: "openai/gpt-oss-120b", 
                     messages: [
@@ -779,13 +845,10 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                             Nivel de Encriptación: ${configNFT.ai_encryption}
                             Edicion: ${configNFT.ai_generation}
                             El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante, teniendo en cuenta tu naturaleza digital y encriptada. 
-                            REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
+                            REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 15 palabras).
                             REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.` 
                         },
-                        {
-                            role: "user",
-                            content: `Un espectador te mira. Di tu línea de texto ahora.`
-                        }
+                        { role: "user", content: `Un espectador te mira. Di tu línea de texto ahora.` }
                     ],
                     temperature: 0.7, 
                     max_tokens: 1024
@@ -793,25 +856,22 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
             });
 
             if (!respuesta.ok) throw new Error("Conexión rechazada");
-            
             const datos = await respuesta.json();
-
             if (datos.error) return;
 
             let textoIA = datos.choices[0].message.content.trim();
             textoIA = textoIA.replace(/^["']|["']$/g, '');
 
             if (textoIA === "") {
-                textoIA = "... (El ente te observa en un silencio sepulcral) ...";
+                textoIA = "... (Silencio sepulcral) ...";
             }
 
-            cajaSubtitulos.innerText = textoIA;
-            isTextVisible = true; 
-            
+            actualizarTexto(textoIA);
+            mostrarTexto();
             animarTemblorIA();
 
             setTimeout(() => {
-                isTextVisible = false; 
+                ocultarTexto();
             }, 10000); 
 
         } catch (error) {
