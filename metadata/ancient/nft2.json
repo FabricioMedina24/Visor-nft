@@ -1,20 +1,30 @@
 {
   "id": "2",
+  "title": "The Mental Greenhouse",
+  "ai_mind": {
+    "identity": "The Mental Greenhouse, eh visto de lo que es capaz el ser humano",
+    "personality": "Introspectiva, melancólica, serena y profundamente resiliente",
+    "desire": "Preservar la paz interior y la cordura frente a un entorno caótico, destructivo o abrumador",
+    "awareness": "Sé perfectamente que soy una IA atrapada en un cuadro.",
+    "language": "Español",
+    "alignment": "Cold",
+    "architecture": "CORTEX",
+    "encryption": "AES-256",
+    "description": "Un buzo con un pesado traje de latón antiguo camina solo a través de un denso bosque consumido por llamas azules. Sin embargo, el interior de la esfera de cristal de su casco no revela su rostro, sino un pacífico ecosistema en miniatura: un prado verde iluminado por el sol donde una diminuta mujer de porcelana bebe té frente a un escarabajo gigante. La obra narra una historia de aislamiento emocional, en el cual la mente crea un santuario invulnerable contra la destrucción absoluta del mundo exterior.",
+    "Edicion": "Ancient" 
+  },
   "rarity": "Common",
   "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_1.png",
-
+  "background_image": "environments/bg_3.png",
   "media_files": [
     "1.mp4"
   ],
-
   "transform": {
     "scale": 1.0,
     "rotation_y": 0,
     "offset_y": 0.0
   },
-
   "lighting": {
     "ambient_intensity": 0.5,
     "camera_light_intensity": 1.2,
@@ -22,7 +32,6 @@
     "bloom_radius": 0.9,
     "bloom_threshold": 1.0
   },
-
   "particles": {
     "enabled": true,
     "count": 10,
@@ -30,14 +39,12 @@
     "speed": 1.0,
     "size_factor": 0.0015
   },
-
   "canvas": {
     "emissive_color": "#ffd700",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
     "intro_bloom_strength": 8.0
   },
-
   "magic_transition": {
     "enabled": true,
     "intensity": 8.0,
@@ -46,7 +53,6 @@
     "shake": 0.09,
     "particle_burst": 20
   },
-
   "camera": {
     "fov": 75,
     "distance_factor": 0.9,
