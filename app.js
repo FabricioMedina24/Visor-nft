@@ -432,7 +432,10 @@ async function inicializarVisorColeccion(coleccion, id) {
                         video.loop = true;
                         video.muted = true; 
                         video.playsInline = true;
-                        video.play();
+                        video.setAttribute('muted', '');
+                        video.setAttribute('playsinline', '');
+                        video.setAttribute('webkit-playsinline', '');
+                        video.play().catch(err => console.warn("Autoplay móvil en espera:", err));
 
                         const videoTexture = new THREE.VideoTexture(video);
                         videoTexture.colorSpace = THREE.SRGBColorSpace;
