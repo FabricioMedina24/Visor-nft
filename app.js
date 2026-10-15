@@ -679,14 +679,14 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
     }
 
     if (!lienzo) {
-        console.warn("No se encontró el LIENZO para colocar los subtítulos.");
+        console.warn("No se encontró el LIENZO para colocar los subtítulos en 3D.");
         return;
     }
 
     // 2. Crear un canvas 2D oculto para dibujar el texto
     const canvasTexto = document.createElement('canvas');
     canvasTexto.width = 1024;
-    canvasTexto.height = 256;
+    canvasTexto.height = 300; // Ampliado para asegurar que quepan varias líneas
     const ctx = canvasTexto.getContext('2d');
 
     // 3. Crear la textura y el material 3D
@@ -694,37 +694,43 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
     texturaTexto.colorSpace = THREE.SRGBColorSpace;
     texturaTexto.minFilter = THREE.LinearFilter;
     
+    // MEJORA: Se añade polygonOffset para forzar que se dibuje SOBRE el lienzo
     const materialTexto = new THREE.MeshBasicMaterial({
         map: texturaTexto,
         transparent: true,
         opacity: 0,
-        depthWrite: false
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        polygonOffsetUnits: -4
     });
 
     // 4. Calcular el tamaño del lienzo para posicionar el plano
     const cajaLienzo = new THREE.Box3().setFromObject(lienzo);
     const tamanoLienzo = cajaLienzo.getSize(new THREE.Vector3());
-    const centroLienzo = cajaLienzo.getCenter(new THREE.Vector3());
 
-    // Crear la malla del texto adaptada al ancho del lienzo
-    const geometriaTexto = new THREE.PlaneGeometry(tamanoLienzo.x * 0.9, tamanoLienzo.x * 0.22);
+    // Crear la malla del texto adaptada a la proporción del canvas
+    const altoPlano = (tamanoLienzo.x * 0.9) * (300 / 1024);
+    const geometriaTexto = new THREE.PlaneGeometry(tamanoLienzo.x * 0.9, altoPlano);
     const mallaTexto = new THREE.Mesh(geometriaTexto, materialTexto);
 
-    // Posicionar en la parte inferior del lienzo, ligeramente hacia adelante en Z para que no se solape
+    // Empujamos en Z usando el grosor del lienzo + margen
+    const grosorZ = (tamanoLienzo.z / 2) + 0.15; 
+    
     mallaTexto.position.set(
         0, 
-        (-tamanoLienzo.y / 2) + (tamanoLienzo.y * 0.1), 
-        0.02 
+        (-tamanoLienzo.y / 2) + (altoPlano / 1.5), // Posición ajustada a la zona inferior del cuadro
+        grosorZ 
     );
     
     // Anclar el plano 3D directamente al lienzo
     lienzo.add(mallaTexto);
 
-    // Función para actualizar el texto en el Canvas 2D con salto de línea automático
+    // Función para actualizar el texto en el Canvas 2D
     function actualizarTexto(texto) {
         ctx.clearRect(0, 0, canvasTexto.width, canvasTexto.height);
         
-        ctx.font = "italic 48px 'Times New Roman', serif";
+        ctx.font = "italic 42px 'Times New Roman', serif"; // Tamaño de letra ajustado
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
@@ -733,7 +739,6 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
         let line = '';
         let lines = [];
 
-        // Generar líneas según el ancho máximo permitido
         for(let n = 0; n < words.length; n++) {
             let testLine = line + words[n] + ' ';
             let metrics = ctx.measureText(testLine);
@@ -747,22 +752,20 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
         }
         lines.push(line);
 
-        // Altura de línea y punto de inicio vertical
-        let lineHeight = 55;
+        let lineHeight = 50;
         let startY = (canvasTexto.height / 2) - ((lines.length - 1) * lineHeight) / 2;
 
         ctx.fillStyle = '#ffffff'; 
 
-        // Dibujar cada línea iterando el arreglo
         lines.forEach((l, i) => {
             let yPos = startY + (i * lineHeight);
             
-            // Pasada 1: Resplandor mágico fuerte
+            // Resplandor
             ctx.shadowColor = hexMagia;
             ctx.shadowBlur = 20;
             ctx.fillText(l.trim(), canvasTexto.width / 2, yPos);
             
-            // Pasada 2: Texto nítido encima
+            // Texto principal
             ctx.shadowBlur = 0; 
             ctx.fillText(l.trim(), canvasTexto.width / 2, yPos);
         });
@@ -829,7 +832,9 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
         try {
             const respuesta = await fetch(URL_PUENTE, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { 
+                    "Content-Type": "application/json" 
+                },
                 body: JSON.stringify({
                     model: "openai/gpt-oss-120b", 
                     messages: [
@@ -845,10 +850,13 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
                             Nivel de Encriptación: ${configNFT.ai_encryption}
                             Edicion: ${configNFT.ai_generation}
                             El visitante te está observando en silencio. Genera un pensamiento corto o lamento dirigido hacia el visitante, teniendo en cuenta tu naturaleza digital y encriptada. 
-                            REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 15 palabras).
+                            REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
                             REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.` 
                         },
-                        { role: "user", content: `Un espectador te mira. Di tu línea de texto ahora.` }
+                        {
+                            role: "user",
+                            content: `Un espectador te mira. Di tu línea de texto ahora.`
+                        }
                     ],
                     temperature: 0.7, 
                     max_tokens: 1024
@@ -856,14 +864,16 @@ async function escucharAlCuadro(configNFT, model, camera, maxDim) {
             });
 
             if (!respuesta.ok) throw new Error("Conexión rechazada");
+            
             const datos = await respuesta.json();
+
             if (datos.error) return;
 
             let textoIA = datos.choices[0].message.content.trim();
             textoIA = textoIA.replace(/^["']|["']$/g, '');
 
             if (textoIA === "") {
-                textoIA = "... (Silencio sepulcral) ...";
+                textoIA = "... (El ente te observa en un silencio sepulcral) ...";
             }
 
             actualizarTexto(textoIA);
