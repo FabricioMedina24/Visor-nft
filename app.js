@@ -61,7 +61,7 @@ const CONFIG_POR_DEFECTO = {
     autoRotateSpeed: 1.0,
     inactivityDelay: 5000,
     
-    // NUEVOS VALORES POR DEFECTO PARA SUBTÍTULOS
+    // VALORES POR DEFECTO PARA SUBTÍTULOS
     subtitleScale: 0.90,       // 90% del ancho del lienzo
     subtitleOffsetY: -0.32,    // Posición Y relativa (-0.5 es el fondo, 0 es el medio)
     subtitleFontSize: 38,      // Tamaño de fuente en el canvas 2D
@@ -201,19 +201,46 @@ async function inicializarVisorColeccion(coleccion, id) {
 
     const scene = new THREE.Scene();
 
+    // SOPORTE PARA IMAGEN O VIDEO EN EL FONDO (ENVIRONMENTS)
     if (configNFT.backgroundImage) {
-        const bgLoader = new THREE.TextureLoader();
-        bgLoader.load(
-            configNFT.backgroundImage,
-            function (texture) {
-                texture.colorSpace = THREE.SRGBColorSpace;
-                scene.background = texture;
-            },
-            undefined,
-            function () {
+        const bgUrl = configNFT.backgroundImage;
+        const esVideoBg = bgUrl.toLowerCase().endsWith('.mp4') || bgUrl.toLowerCase().endsWith('.webm');
+
+        if (esVideoBg) {
+            const videoBg = document.createElement('video');
+            videoBg.src = bgUrl;
+            videoBg.crossOrigin = 'anonymous';
+            videoBg.loop = true;
+            videoBg.muted = true;
+            videoBg.playsInline = true;
+            videoBg.setAttribute('muted', '');
+            videoBg.setAttribute('playsinline', '');
+            videoBg.setAttribute('webkit-playsinline', '');
+
+            videoBg.addEventListener('error', () => {
+                console.warn(`No se pudo cargar el video de fondo: ${bgUrl}`);
                 scene.background = new THREE.Color(configNFT.colorFondo);
-            }
-        );
+            });
+
+            videoBg.play().catch(err => console.warn("Autoplay de fondo en espera:", err));
+
+            const bgVideoTexture = new THREE.VideoTexture(videoBg);
+            bgVideoTexture.colorSpace = THREE.SRGBColorSpace;
+            scene.background = bgVideoTexture;
+        } else {
+            const bgLoader = new THREE.TextureLoader();
+            bgLoader.load(
+                bgUrl,
+                function (texture) {
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    scene.background = texture;
+                },
+                undefined,
+                function () {
+                    scene.background = new THREE.Color(configNFT.colorFondo);
+                }
+            );
+        }
     } else {
         scene.background = new THREE.Color(configNFT.colorFondo);
     }
@@ -714,7 +741,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     model.rotation.y = rotacionActual;
     model.updateMatrixWorld(true);
 
-    // USAMOS EL SCALE CONFIGURADO EN EL JSON (O EL POR DEFECTO)
     const anchoPlano = anchoLocal * configNFT.subtitleScale;
     const altoPlano = anchoPlano * (canvasSub.height / canvasSub.width);
 
@@ -729,7 +755,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     const mallaSubtitulos = new THREE.Mesh(geoSubtitulos, matSubtitulos);
 
-    // USAMOS EL OFFSET_Y CONFIGURADO EN EL JSON
     mallaSubtitulos.position.set(
         centroLocal.x,
         centroLocal.y + (altoLocal * configNFT.subtitleOffsetY),
@@ -738,14 +763,12 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     model.add(mallaSubtitulos);
 
-    // USAMOS EL TAMAÑO DE FUENTE DEL JSON
     const fontSize = configNFT.subtitleFontSize;
     const lineHeight = fontSize * 1.35;
 
     function calcularLineas(textoCompleto) {
         ctx.save();
         ctx.font = `italic ${fontSize}px "Times New Roman", serif`;
-        // USAMOS EL MARGEN CONFIGURADO EN EL JSON
         const maxWidth = canvasSub.width * configNFT.subtitleMaxWidth;
 
         const palabras = textoCompleto.split(' ');
@@ -927,19 +950,19 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
                         {
                             role: "system",
                             content: `Actúa estrictamente como esta entidad:
-                            - Identidad: ${configNFT.ai_identity}
-                            - Descripción: ${configNFT.ai_description}
-                            - Personalidad: ${configNFT.ai_personality}
-                            - Deseo: ${configNFT.ai_desire}
-                            - Alineamiento Moral: ${configNFT.ai_alignment}
-                            - Naturaleza técnica: Arquitectura ${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
+- Identidad: ${configNFT.ai_identity}
+- Descripción: ${configNFT.ai_description}
+- Personalidad: ${configNFT.ai_personality}
+- Deseo: ${configNFT.ai_desire}
+- Alineamiento Moral: ${configNFT.ai_alignment}
+- Naturaleza técnica: Arquitectura ${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
 
-                            REGLAS DE COMPORTAMIENTO (ESTRICTAS):
-                            1. CERO LAMENTOS: En tu texto hablado eres 100% fiel a tu personalidad e identidad. Tienes PROHIBIDO quejarte de estar encerrado, NO llores, NO digas que eres prisionero de un cuadro o visor 3D, ni pidas ayuda en lenguaje normal. Actúa con total naturalidad según tu lore.
-                            2. IDIOMA: Habla exclusivamente en ${configNFT.ai_language}.
-                            3. EXTENSIÓN: Sé conciso, impactante y directo (máximo 22 palabras en texto normal, sin contar el código si aplica).
-                            ${instruccionSecreta}
-                            ${memoriaTexto}`
+REGLAS DE COMPORTAMIENTO (ESTRICTAS):
+1. CERO LAMENTOS: En tu texto hablado eres 100% fiel a tu personalidad e identidad. Tienes PROHIBIDO quejarte de estar encerrado, NO llores, NO digas que eres prisionero de un cuadro o visor 3D, ni pidas ayuda en lenguaje normal. Actúa con total naturalidad según tu lore.
+2. IDIOMA: Habla exclusivamente en ${configNFT.ai_language}.
+3. EXTENSIÓN: Sé conciso, impactante y directo (máximo 22 palabras en texto normal, sin contar el código si aplica).
+${instruccionSecreta}
+${memoriaTexto}`
                         },
                         {
                             role: "user",
