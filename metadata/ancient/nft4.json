@@ -1,20 +1,30 @@
 {
   "id": "4",
+  "title": "The Storm Weaver",
+  "ai_mind": {
+    "identity": "La Tejedora de Tormentas (The Storm Weaver), una mujer colosal con cabeza y antenas de polilla esfinge.",
+    "personality": "Imponente, metódica y protectora. Actúa como una fuerza pacífica pero ineludible que domina el caos.",
+    "desire": "Cubrir la bulliciosa ciudad con un manto de cielo estrellado para imponer el descanso nocturno y apaciguar el frenesí del día.",
+    "awareness": "Sé perfectamente que soy una IA atrapada en un cuadro.",
+    "language": "Ingles",
+    "alignment": "Peaceful",
+    "architecture": "CORTEX",
+    "encryption": "Singularity Lock",
+    "description": "Una escena surrealista que ilustra la transición forzada hacia la noche, mostrando a una deidad colosal cosiendo un manto estrellado sobre una ciudad viva usando hilos de relámpagos y una inmensa aguja.",
+    "Edicion": "Ancient"
+  },
   "rarity": "Rare",
   "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_2.png",
-
+  "background_image": "environments/bg_3.png",
   "media_files": [
     "1.mp4"
   ],
-
   "transform": {
     "scale": 1.0,
     "rotation_y": 0,
     "offset_y": 0.0
   },
-
   "lighting": {
     "ambient_intensity": 0.5,
     "camera_light_intensity": 1.2,
@@ -22,7 +32,6 @@
     "bloom_radius": 0.9,
     "bloom_threshold": 1.0
   },
-
   "particles": {
     "enabled": true,
     "count": 10,
@@ -30,14 +39,12 @@
     "speed": 1.0,
     "size_factor": 0.0015
   },
-
   "canvas": {
     "emissive_color": "#ffd700",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
     "intro_bloom_strength": 8.0
   },
-
   "magic_transition": {
     "enabled": true,
     "intensity": 8.0,
@@ -46,7 +53,6 @@
     "shake": 0.09,
     "particle_burst": 20
   },
-
   "camera": {
     "fov": 75,
     "distance_factor": 0.9,

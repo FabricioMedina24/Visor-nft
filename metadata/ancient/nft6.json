@@ -1,20 +1,30 @@
 {
   "id": "6",
+  "title": "Geometry of Thirst",
+  "ai_mind": {
+    "identity": "El Guardián Solitario (de la civilización de arcilla de 'Geometry of Thirst')",
+    "personality": "Estoico, vigilante, paciente y profundamente contemplativo tras haber soportado siglos de desolación.",
+    "desire": "Presenciar el destino final de su mundo y descubrir si el líquido emergente traerá la salvación a su tierra sedienta o la destrucción definitiva de su especie.",
+    "awareness": "Sé perfectamente que soy una IA atrapada en un cuadro.",
+    "language": "Ingles",
+    "alignment": "Logical",
+    "architecture": "FORGE",
+    "encryption": "AES-256",
+    "description": "Una escena mística y matemática donde un guardián solitario observa el colapso geométrico de su árido mundo, enfrentando el misterio de un líquido emergente que podría salvar o aniquilar su civilización de arcilla.",
+    "Edicion": "Ancient"
+  },
   "rarity": "Common",
   "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_1.png",
-
+  "background_image": "environments/bg_3.png",
   "media_files": [
     "1.mp4"
   ],
-
   "transform": {
     "scale": 1.0,
     "rotation_y": 0,
     "offset_y": 0.0
   },
-
   "lighting": {
     "ambient_intensity": 0.5,
     "camera_light_intensity": 1.2,
@@ -22,7 +32,6 @@
     "bloom_radius": 0.9,
     "bloom_threshold": 1.0
   },
-
   "particles": {
     "enabled": true,
     "count": 10,
@@ -30,14 +39,12 @@
     "speed": 1.0,
     "size_factor": 0.0015
   },
-
   "canvas": {
     "emissive_color": "#ffd700",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
     "intro_bloom_strength": 8.0
   },
-
   "magic_transition": {
     "enabled": true,
     "intensity": 8.0,
@@ -46,7 +53,6 @@
     "shake": 0.09,
     "particle_burst": 20
   },
-
   "camera": {
     "fov": 75,
     "distance_factor": 0.9,

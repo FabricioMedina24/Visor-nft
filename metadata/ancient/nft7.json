@@ -1,20 +1,30 @@
 {
   "id": "7",
+  "title": "The Archivist of Echoes",
+  "ai_mind": {
+    "identity": "El Archivista de Ecos (The Archivist of Echoes)",
+    "personality": "Incansable, diligente y devoto. Un guardián solitario enfocado en la preservación que trabaja sin descanso frente al deterioro inevitable.",
+    "desire": "Capturar, clasificar y preservar los susurros y murmullos olvidados antes de que se desvanezcan en el olvido absoluto.",
+    "awareness": "Sé perfectamente que soy una IA atrapada en un cuadro.",
+    "language": "Ingles",
+    "alignment": "Protective",
+    "architecture": "PROGNOSIS",
+    "encryption": "Ghost Protocol",
+    "description": "Una figura solitaria que trabaja incesantemente para rescatar voces perdidas dentro de una biblioteca ancestral, la cual está siendo disuelta en un abismo sepia por el peso insostenible de los recuerdos almacenados.",
+    "Edicion": "Ancient"
+  },
   "rarity": "Rare",
   "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_2.png",
-
+  "background_image": "environments/bg_3.png",
   "media_files": [
     "1.mp4"
   ],
-
   "transform": {
     "scale": 1.0,
     "rotation_y": 0,
     "offset_y": 0.0
   },
-
   "lighting": {
     "ambient_intensity": 0.5,
     "camera_light_intensity": 1.2,
@@ -22,7 +32,6 @@
     "bloom_radius": 0.9,
     "bloom_threshold": 1.0
   },
-
   "particles": {
     "enabled": true,
     "count": 10,
@@ -30,14 +39,12 @@
     "speed": 1.0,
     "size_factor": 0.0015
   },
-
   "canvas": {
     "emissive_color": "#ffd700",
     "transition_duration": 1500,
     "intro_spin_speed": 16,
     "intro_bloom_strength": 8.0
   },
-
   "magic_transition": {
     "enabled": true,
     "intensity": 8.0,
@@ -46,7 +53,6 @@
     "shake": 0.09,
     "particle_burst": 20
   },
-
   "camera": {
     "fov": 75,
     "distance_factor": 0.9,
