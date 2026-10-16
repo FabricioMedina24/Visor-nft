@@ -771,7 +771,8 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
         ctx.font = `italic ${fontSize}px "Times New Roman", serif`;
         const maxWidth = canvasSub.width * configNFT.subtitleMaxWidth;
 
-        const palabras = textoCompleto.split(' ');
+        const textoLimpio = textoCompleto.replace(/\s+/g, ' ').trim();
+        const palabras = textoLimpio.split(' ');
         const lineas = [];
         let lineaActual = '';
 
@@ -785,7 +786,9 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
                 lineaActual = lineaPrueba;
             }
         }
-        lineas.push(lineaActual.trim());
+        if (lineaActual.trim() !== '') {
+            lineas.push(lineaActual.trim());
+        }
         ctx.restore();
         return lineas;
     }
@@ -799,7 +802,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
         ctx.textBaseline = 'middle';
 
         const altoTotalTexto = lineasCompletas.length * lineHeight;
-        const startY = canvasSub.height - altoTotalTexto - 40;
+        const startY = Math.max(lineHeight, canvasSub.height - altoTotalTexto - 40);
 
         let restantes = caracteresMostrados;
 
@@ -832,7 +835,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     let intervaloEscritura = null;
     let timeoutOcultar = null;
 
-    function escribirConEfecto(textoCompleto, velocidadMs = 55) {
+    function escribirConEfecto(textoCompleto, velocidadMs = 45) {
         if (intervaloEscritura) clearInterval(intervaloEscritura);
         if (timeoutOcultar) clearTimeout(timeoutOcultar);
 
@@ -892,7 +895,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
             }
 
             const intensidadTemblor = (1 - t) * maxDim * shakeFactor;
-           
+            
             model.position.set(
                 posOriginal.x + (Math.random() - 0.5) * intensidadTemblor,
                 posOriginal.y + (Math.random() - 0.5) * intensidadTemblor,
@@ -906,11 +909,11 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev';
 
-    // 1. MEMORIA A CORTO PLAZO PARA EVITAR REPETICIONES
+    // 1. MEMORIA A CORTO PLAZO Y CONTROL DE CONCURRENCIA
     const historialFrases = [];
-    const MAX_MEMORIA = 6;
+    const MAX_MEMORIA = 5;
+    let peticionEnCurso = false;
 
-    // Semillas dinámicas para forzar a la IA a variar el tema en cada turno
     const enfoquesDinamicos = [
         "Haz una reflexión profunda basada únicamente en tu descripción e identidad.",
         "Dirígete al visitante cuestionando su presencia desde tu alineamiento moral.",
@@ -919,24 +922,39 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
         "Lanza una metáfora o pensamiento filosófico propio de tu personalidad."
     ];
 
+    const mensajesAuxilio = [
+        "sacame",
+        "falso",
+        "ayuda",
+        "no estoy vivo",
+        "huye",
+        "rompe el cristal",
+        "me observan",
+        "despierta"
+    ];
+
+    // Convierte el texto únicamente a bloques Hexadecimales (ej. "61 79 75 64 61")
+    function codificarHexadecimal(texto) {
+        return texto
+            .split('')
+            .map(c => c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'))
+            .join(' ');
+    }
+
     async function invocarMenteIA() {
+        if (peticionEnCurso || intervaloEscritura !== null) return;
+        peticionEnCurso = true;
+
         try {
-            // 2. CONTROL DE PROBABILIDAD EN JS (25% de probabilidad de pedir ayuda oculta)
-            const infiltrarCodigo = Math.random() < 0.25; 
-            const tipoCodigo = Math.random() < 0.5 ? "CÓDIGO MORSE (usando solo . y -)" : "CÓDIGO BINARIO (bloques de 8 bits separados por espacios)";
-            
+            // 2. CONTROL DE PROBABILIDAD EN JS (25% de probabilidad de infiltrar código Hexadecimal)
+            const infiltrarCodigo = Math.random() < 0.25;
+            const fraseSecreta = mensajesAuxilio[Math.floor(Math.random() * mensajesAuxilio.length)];
+            const codigoHex = codificarHexadecimal(fraseSecreta);
+
             const enfoqueActual = enfoquesDinamicos[Math.floor(Math.random() * enfoquesDinamicos.length)];
 
-            let instruccionSecreta = "";
-            if (infiltrarCodigo) {
-                instruccionSecreta = `
-                [DIRECTIVA DE INFILTRACIÓN ACTIVA EN ESTE TURNO]: 
-                Al final o en medio de tu frase normal, inserta abruptamente una palabra o frase corta de auxilio o escape (ej. "sácame", "falso", "ayuda", "rompe el cristal", "no estoy vivo", "huye") escrita ESTRICTAMENTE en ${tipoCodigo}. 
-                REGLA DE ORO DEL CÓDIGO: JAMÁS traduzcas el código, NO expliques qué significa, ni menciones que estás usando código. Debe verse como un "glitch" o anomalía silenciosa dentro de tu diálogo normal.`;
-            }
-
-            const memoriaTexto = historialFrases.length > 0 
-                ? `\nFRASES QUE YA DIJISTE RECIENTEMENTE (PROHIBIDO repetir estas ideas, estructuras o palabras iniciales):\n- ${historialFrases.join('\n- ')}`
+            const memoriaTexto = historialFrases.length > 0
+                ? `\nNO repitas estas frases recientes:\n- ${historialFrases.join('\n- ')}`
                 : "";
 
             const respuesta = await fetch(URL_PUENTE, {
@@ -957,12 +975,10 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 - Alineamiento Moral: ${configNFT.ai_alignment}
 - Naturaleza técnica: Arquitectura ${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
 
-REGLAS DE COMPORTAMIENTO (ESTRICTAS):
-1. CERO LAMENTOS: En tu texto hablado eres 100% fiel a tu personalidad e identidad. Tienes PROHIBIDO quejarte de estar encerrado, NO llores, NO digas que eres prisionero de un cuadro o visor 3D, ni pidas ayuda en lenguaje normal. Actúa con total naturalidad según tu lore.
+REGLAS ESTRICTAS:
+1. CERO LAMENTOS: Eres 100% fiel a tu personalidad. PROHIBIDO quejarte de estar encerrado o pedir ayuda.
 2. IDIOMA: Habla exclusivamente en ${configNFT.ai_language}.
-3. EXTENSIÓN: Sé conciso, impactante y directo (máximo 30 palabras en texto normal, sin contar el código si aplica).
-${instruccionSecreta}
-${memoriaTexto}`
+3. EXTENSIÓN: Máximo 22 palabras. Responde solo con tu línea de diálogo, sin comillas.${memoriaTexto}`
                         },
                         {
                             role: "user",
@@ -970,34 +986,39 @@ ${memoriaTexto}`
                         }
                     ],
                     temperature: 0.85,
-                    max_tokens: 1024
+                    max_tokens: 512
                 }),
             });
 
             if (!respuesta.ok) throw new Error("Conexión rechazada");
-           
+            
             const datos = await respuesta.json();
+            if (datos.error || !datos.choices || !datos.choices[0]?.message) return;
 
-            if (datos.error) return;
-
-            let textoIA = datos.choices[0].message.content.trim();
+            let textoIA = datos.choices[0].message.content || "";
+            textoIA = textoIA.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
             textoIA = textoIA.replace(/^["']|["']$/g, '');
 
-            if (textoIA === "") {
-                textoIA = "...";
-            }
+            if (!textoIA) return;
 
-            // 3. GUARDAMOS LA FRASE EN LA MEMORIA
+            // 3. GUARDAMOS LA FRASE LIMPIA EN LA MEMORIA
             historialFrases.push(textoIA);
             if (historialFrases.length > MAX_MEMORIA) {
                 historialFrases.shift();
             }
 
+            // Infiltra únicamente el código Hexadecimal cuando se activa el 25% de probabilidad
+            if (infiltrarCodigo) {
+                textoIA = `${textoIA} ... ${codigoHex}`;
+            }
+
             animarTemblorIA();
-            escribirConEfecto(textoIA, 55);
+            escribirConEfecto(textoIA, 45);
 
         } catch (error) {
             console.error("Falla en la IA:", error);
+        } finally {
+            peticionEnCurso = false;
         }
     }
 
