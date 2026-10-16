@@ -960,7 +960,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 REGLAS DE COMPORTAMIENTO (ESTRICTAS):
 1. CERO LAMENTOS: En tu texto hablado eres 100% fiel a tu personalidad e identidad. Tienes PROHIBIDO quejarte de estar encerrado, NO llores, NO digas que eres prisionero de un cuadro o visor 3D, ni pidas ayuda en lenguaje normal. Actúa con total naturalidad según tu lore.
 2. IDIOMA: Habla exclusivamente en ${configNFT.ai_language}.
-3. EXTENSIÓN: Sé conciso, impactante y directo (máximo 22 palabras en texto normal, sin contar el código si aplica).
+3. EXTENSIÓN: Sé conciso, impactante y directo (máximo 30 palabras en texto normal, sin contar el código si aplica).
 ${instruccionSecreta}
 ${memoriaTexto}`
                         },
