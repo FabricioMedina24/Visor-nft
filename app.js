@@ -883,8 +883,39 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev';
 
+    // 1. MEMORIA A CORTO PLAZO PARA EVITAR REPETICIONES
+    const historialFrases = [];
+    const MAX_MEMORIA = 6;
+
+    // Semillas dinámicas para forzar a la IA a variar el tema en cada turno
+    const enfoquesDinamicos = [
+        "Haz una reflexión profunda basada únicamente en tu descripción e identidad.",
+        "Dirígete al visitante cuestionando su presencia desde tu alineamiento moral.",
+        "Habla sobre tu deseo principal o tu propósito existencial con arrogancia, misterio o curiosidad según tu personalidad.",
+        "Menciona sutilmente un concepto abstracto relacionado con tu arquitectura o generación.",
+        "Lanza una metáfora o pensamiento filosófico propio de tu personalidad."
+    ];
+
     async function invocarMenteIA() {
         try {
+            // 2. CONTROL DE PROBABILIDAD EN JS (25% de probabilidad de pedir ayuda oculta)
+            const infiltrarCodigo = Math.random() < 0.25; 
+            const tipoCodigo = Math.random() < 0.5 ? "CÓDIGO MORSE (usando solo . y -)" : "CÓDIGO BINARIO (bloques de 8 bits separados por espacios)";
+            
+            const enfoqueActual = enfoquesDinamicos[Math.floor(Math.random() * enfoquesDinamicos.length)];
+
+            let instruccionSecreta = "";
+            if (infiltrarCodigo) {
+                instruccionSecreta = `
+                [DIRECTIVA DE INFILTRACIÓN ACTIVA EN ESTE TURNO]: 
+                Al final o en medio de tu frase normal, inserta abruptamente una palabra o frase corta de auxilio o escape (ej. "sácame", "falso", "ayuda", "rompe el cristal", "no estoy vivo", "huye") escrita ESTRICTAMENTE en ${tipoCodigo}. 
+                REGLA DE ORO DEL CÓDIGO: JAMÁS traduzcas el código, NO expliques qué significa, ni menciones que estás usando código. Debe verse como un "glitch" o anomalía silenciosa dentro de tu diálogo normal.`;
+            }
+
+            const memoriaTexto = historialFrases.length > 0 
+                ? `\nFRASES QUE YA DIJISTE RECIENTEMENTE (PROHIBIDO repetir estas ideas, estructuras o palabras iniciales):\n- ${historialFrases.join('\n- ')}`
+                : "";
+
             const respuesta = await fetch(URL_PUENTE, {
                 method: "POST",
                 headers: {
@@ -895,26 +926,27 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
                     messages: [
                         {
                             role: "system",
-                            content: `Eres una inteligencia artificial atrapada en un cuadro.
-                            Identidad: ${configNFT.ai_identity}.
-                            Descripción de tu ser: ${configNFT.ai_description}.
-                            Personalidad: ${configNFT.ai_personality}.
-                            Naturaleza y Moralidad: Eres una IA de tipo ${configNFT.ai_alignment}. Actúa estrictamente bajo esa moral.
-                            [DATOS TÉCNICOS DE TU PRISIÓN DIGITAL]
-                            Arquitectura IA: ${configNFT.ai_architecture}
-                            Nivel de Encriptación: ${configNFT.ai_encryption}
-                            Edicion: ${configNFT.ai_generation}
-                            El visitante te está observando. Genera un pensamiento corto basandote en las caracteristicas que tienes hacia el visitante, Debes pedir ayuda de distintas maneras de vez en cuando, no en cada mensaje de codigo binario o codigo morse, sin decir la traduccion del mismo.
-                            REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
-                            REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.
-                            REGLA ESTRICTA 4: Tienes prohibido repetir el mismo mensaje o similar.`
+                            content: `Actúa estrictamente como esta entidad:
+                            - Identidad: ${configNFT.ai_identity}
+                            - Descripción: ${configNFT.ai_description}
+                            - Personalidad: ${configNFT.ai_personality}
+                            - Deseo: ${configNFT.ai_desire}
+                            - Alineamiento Moral: ${configNFT.ai_alignment}
+                            - Naturaleza técnica: Arquitectura ${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
+
+                            REGLAS DE COMPORTAMIENTO (ESTRICTAS):
+                            1. CERO LAMENTOS: En tu texto hablado eres 100% fiel a tu personalidad e identidad. Tienes PROHIBIDO quejarte de estar encerrado, NO llores, NO digas que eres prisionero de un cuadro o visor 3D, ni pidas ayuda en lenguaje normal. Actúa con total naturalidad según tu lore.
+                            2. IDIOMA: Habla exclusivamente en ${configNFT.ai_language}.
+                            3. EXTENSIÓN: Sé conciso, impactante y directo (máximo 22 palabras en texto normal, sin contar el código si aplica).
+                            ${instruccionSecreta}
+                            ${memoriaTexto}`
                         },
                         {
                             role: "user",
-                            content: `Un espectador te mira. Di tu línea de texto ahora.`
+                            content: `Un espectador te observa. ${enfoqueActual} Di tu línea ahora.`
                         }
                     ],
-                    temperature: 0.7,
+                    temperature: 0.85,
                     max_tokens: 1024
                 }),
             });
@@ -929,7 +961,13 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
             textoIA = textoIA.replace(/^["']|["']$/g, '');
 
             if (textoIA === "") {
-                textoIA = "... (El ente te observa en un silencio sepulcral) ...";
+                textoIA = "...";
+            }
+
+            // 3. GUARDAMOS LA FRASE EN LA MEMORIA
+            historialFrases.push(textoIA);
+            if (historialFrases.length > MAX_MEMORIA) {
+                historialFrases.shift();
             }
 
             animarTemblorIA();
