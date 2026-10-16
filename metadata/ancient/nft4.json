@@ -60,7 +60,7 @@
     "inactivity_delay": 5000
   },
   "subtitles": {
-    "scale": 0.90,
+    "scale": 0.60,
     "offset_y": -0.26,
     "font_size": 34,
     "max_width_ratio": 0.95
