@@ -904,10 +904,10 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
                             Arquitectura IA: ${configNFT.ai_architecture}
                             Nivel de Encriptación: ${configNFT.ai_encryption}
                             Edicion: ${configNFT.ai_generation}
-                            El visitante te está observando. Genera un pensamiento corto basandote en las caracteristicas que tienes hacia el visitante.
+                            El visitante te está observando. Genera un pensamiento corto basandote en las caracteristicas que tienes hacia el visitante, Debes pedir ayuda de distintas maneras de vez en cuando, no en cada mensaje de codigo binario o codigo morse, sin decir la traduccion del mismo.
                             REGLA ESTRICTA 1: Tienes prohibido quedarte en silencio. DEBES pronunciar al menos una palabra. Sé breve (máximo 25 palabras).
                             REGLA ESTRICTA 2: Debes hablar EXCLUSIVAMENTE en este idioma: ${configNFT.ai_language}.
-                            REGLA ESTRICTA 4: Debes pedir ayuda de vez en cuando, en codigo binario o codigo morse.`
+                            REGLA ESTRICTA 4: Tienes prohibido repetir el mismo mensaje o similar.`
                         },
                         {
                             role: "user",
