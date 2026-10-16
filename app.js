@@ -630,12 +630,10 @@ async function inicializarVisorColeccion(coleccion, id) {
                     }, configNFT.cycleInterval);
                 }
 
+                // Iniciamos la IA de inmediato (en paralelo al giro de entrada) para no perder 1.5s
+                escucharAlCuadro(configNFT, model, lienzo, maxDim);
                 iniciarEntradaMagica();
                 ocultarLoader();
-               
-                setTimeout(() => {
-                    escucharAlCuadro(configNFT, model, lienzo, maxDim);
-                }, 1500);
                
             } else {
                 ocultarLoader();
@@ -708,7 +706,7 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// SUBTÍTULOS INTEGRADOS EN EL LIENZO 3D (AJUSTABLES POR METADATOS)
+// SUBTÍTULOS INTEGRADOS EN EL LIENZO 3D (CON PRE-CARGA Y AUTO-REINTENTO)
 // =========================================================================
 async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     if (!lienzo) return;
@@ -908,11 +906,12 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     }
 
     const URL_PUENTE = 'https://api-ia-puente.fabriciomedina1000.workers.dev';
+    const momentoInicioEscena = performance.now();
 
-    // 1. MEMORIA A CORTO PLAZO Y CONTROL DE CONCURRENCIA
     const historialFrases = [];
     const MAX_MEMORIA = 5;
-    let peticionEnCurso = false;
+    const colaMensajes = [];
+    let descargandoEnFondo = false;
 
     const enfoquesDinamicos = [
         "Haz una reflexión profunda basada únicamente en tu descripción e identidad.",
@@ -941,12 +940,10 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
             .join(' ');
     }
 
-    async function invocarMenteIA() {
-        if (peticionEnCurso || intervaloEscritura !== null) return;
-        peticionEnCurso = true;
-
+    // Solicita una frase a la IA con soporte de auto-reintento si el modelo se queda pensando demasiado
+    async function obtenerFraseDesdeAPI(intento = 1) {
         try {
-            // 2. CONTROL DE PROBABILIDAD EN JS (25% de probabilidad de infiltrar código Hexadecimal)
+            const tInicio = performance.now();
             const infiltrarCodigo = Math.random() < 0.25;
             const fraseSecreta = mensajesAuxilio[Math.floor(Math.random() * mensajesAuxilio.length)];
             const codigoHex = codificarHexadecimal(fraseSecreta);
@@ -954,7 +951,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
             const enfoqueActual = enfoquesDinamicos[Math.floor(Math.random() * enfoquesDinamicos.length)];
 
             const memoriaTexto = historialFrases.length > 0
-                ? `\nNO repitas estas frases recientes:\n- ${historialFrases.join('\n- ')}`
+                ? `\nNo repitas estas líneas:\n- ${historialFrases.join('\n- ')}`
                 : "";
 
             const respuesta = await fetch(URL_PUENTE, {
@@ -967,18 +964,18 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
                     messages: [
                         {
                             role: "system",
-                            content: `Actúa estrictamente como esta entidad:
+                            content: `Actúa como esta entidad:
 - Identidad: ${configNFT.ai_identity}
 - Descripción: ${configNFT.ai_description}
 - Personalidad: ${configNFT.ai_personality}
 - Deseo: ${configNFT.ai_desire}
-- Alineamiento Moral: ${configNFT.ai_alignment}
-- Naturaleza técnica: Arquitectura ${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
+- Alineamiento: ${configNFT.ai_alignment}
+- Arquitectura: ${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
 
-REGLAS ESTRICTAS:
-1. CERO LAMENTOS: Eres 100% fiel a tu personalidad. PROHIBIDO quejarte de estar encerrado o pedir ayuda.
-2. IDIOMA: Habla exclusivamente en ${configNFT.ai_language}.
-3. EXTENSIÓN: Máximo 22 palabras. Responde solo con tu línea de diálogo, sin comillas.${memoriaTexto}`
+REGLAS:
+1. Eres 100% fiel a tu personalidad. Prohibido quejarte de estar encerrado o pedir ayuda.
+2. Idioma: ${configNFT.ai_language}.
+3. Máximo 22 palabras. Responde directo al grano sin sobreanalizar y sin comillas.${memoriaTexto}`
                         },
                         {
                             role: "user",
@@ -986,22 +983,30 @@ REGLAS ESTRICTAS:
                         }
                     ],
                     temperature: 0.85,
-                    max_tokens: 512
+                    max_tokens: 2048 // Suficiente margen para que el razonamiento interno de gpt-oss-120b nunca corte la respuesta
                 }),
             });
 
-            if (!respuesta.ok) throw new Error("Conexión rechazada");
+            if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
             
             const datos = await respuesta.json();
-            if (datos.error || !datos.choices || !datos.choices[0]?.message) return;
+            const msg = datos?.choices?.[0]?.message;
 
-            let textoIA = datos.choices[0].message.content || "";
+            let textoIA = msg?.content || "";
             textoIA = textoIA.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-            textoIA = textoIA.replace(/^["']|["']$/g, '');
+            textoIA = textoIA.replace(/^["']|["']$/g, '').trim();
 
-            if (!textoIA) return;
+            if (!textoIA) {
+                console.warn(`[IA Visor] Respuesta vacía en intento ${intento} (finish_reason: ${datos?.choices?.[0]?.finish_reason}). Reintentando...`);
+                if (intento < 2) {
+                    return await obtenerFraseDesdeAPI(intento + 1);
+                }
+                return null;
+            }
 
-            // 3. GUARDAMOS LA FRASE LIMPIA EN LA MEMORIA
+            const ms = Math.round(performance.now() - tInicio);
+            console.log(`[IA Visor] Frase generada en ${ms}ms:`, textoIA);
+
             historialFrases.push(textoIA);
             if (historialFrases.length > MAX_MEMORIA) {
                 historialFrases.shift();
@@ -1012,16 +1017,60 @@ REGLAS ESTRICTAS:
                 textoIA = `${textoIA} ... ${codigoHex}`;
             }
 
-            animarTemblorIA();
-            escribirConEfecto(textoIA, 45);
+            return textoIA;
 
         } catch (error) {
-            console.error("Falla en la IA:", error);
-        } finally {
-            peticionEnCurso = false;
+            console.error(`[IA Visor] Error en intento ${intento}:`, error);
+            if (intento < 2) {
+                await new Promise(r => setTimeout(r, 1500));
+                return await obtenerFraseDesdeAPI(intento + 1);
+            }
+            return null;
         }
     }
 
-    invocarMenteIA();
-    setInterval(invocarMenteIA, 30000);
+    // Descarga el próximo mensaje por adelantado para que salga al instante cuando toque su turno
+    async function preCargarEnFondo() {
+        if (descargandoEnFondo || colaMensajes.length > 0) return;
+        descargandoEnFondo = true;
+        const nuevaFrase = await obtenerFraseDesdeAPI();
+        if (nuevaFrase) {
+            colaMensajes.push(nuevaFrase);
+        }
+        descargandoEnFondo = false;
+    }
+
+    async function mostrarSiguienteMensaje() {
+        // Si todavía está escribiendo en el lienzo, revisa en 2 segundos
+        if (intervaloEscritura !== null) {
+            setTimeout(mostrarSiguienteMensaje, 2000);
+            return;
+        }
+
+        let fraseLista = colaMensajes.shift();
+        if (!fraseLista) {
+            // Si aún no había una frase pre-cargada, la pide ahora mismo
+            fraseLista = await obtenerFraseDesdeAPI();
+        }
+
+        // Asegura que el giro inicial de 1800ms haya terminado antes de mostrar el primer subtítulo
+        const tiempoTranscurrido = performance.now() - momentoInicioEscena;
+        if (tiempoTranscurrido < 1800) {
+            await new Promise(r => setTimeout(r, 1800 - tiempoTranscurrido));
+        }
+
+        if (fraseLista) {
+            animarTemblorIA();
+            escribirConEfecto(fraseLista, 45);
+            // Mientras el usuario lee este mensaje, ya pre-cargamos el siguiente en segundo plano
+            preCargarEnFondo();
+            // Programamos el próximo mensaje para dentro de 30 segundos exactos
+            setTimeout(mostrarSiguienteMensaje, 30000);
+        } else {
+            // Si fallaron todos los intentos de red, reintenta en 5 segundos en vez de esperar 30s
+            setTimeout(mostrarSiguienteMensaje, 5000);
+        }
+    }
+
+    mostrarSiguienteMensaje();
 }
