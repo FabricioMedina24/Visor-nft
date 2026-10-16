@@ -58,5 +58,11 @@
     "distance_factor": 0.9,
     "auto_rotate_speed": 1.2,
     "inactivity_delay": 5000
+  },
+  "subtitles": {
+    "scale": 0.90,
+    "offset_y": -0.30,
+    "font_size": 34,
+    "max_width_ratio": 0.95
   }
 }

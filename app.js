@@ -733,7 +733,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     mallaSubtitulos.position.set(
         centroLocal.x,
         centroLocal.y + (altoLocal * configNFT.subtitleOffsetY),
-        centroLocal.z + (grosorLocalZ / 2) + 0.008
+        centroLocal.z + (grosorLocalZ / 2) + 0.002
     );
 
     model.add(mallaSubtitulos);
