@@ -61,7 +61,7 @@ const CONFIG_POR_DEFECTO = {
     autoRotateSpeed: 1.0,
     inactivityDelay: 5000,
     
-    // NUEVOS VALORES POR DEFECTO PARA SUBTÍTULOS
+    // VALORES POR DEFECTO PARA SUBTÍTULOS
     subtitleScale: 0.90,       // 90% del ancho del lienzo
     subtitleOffsetY: -0.32,    // Posición Y relativa (-0.5 es el fondo, 0 es el medio)
     subtitleFontSize: 38,      // Tamaño de fuente en el canvas 2D
@@ -201,19 +201,46 @@ async function inicializarVisorColeccion(coleccion, id) {
 
     const scene = new THREE.Scene();
 
+    // SOPORTE PARA FONDOS EN VIDEO (.mp4 / .webm) E IMÁGENES (.png / .jpg)
     if (configNFT.backgroundImage) {
-        const bgLoader = new THREE.TextureLoader();
-        bgLoader.load(
-            configNFT.backgroundImage,
-            function (texture) {
-                texture.colorSpace = THREE.SRGBColorSpace;
-                scene.background = texture;
-            },
-            undefined,
-            function () {
+        const esVideoFondo = configNFT.backgroundImage.toLowerCase().endsWith('.mp4') || 
+                             configNFT.backgroundImage.toLowerCase().endsWith('.webm');
+
+        if (esVideoFondo) {
+            const bgVideo = document.createElement('video');
+            bgVideo.src = configNFT.backgroundImage;
+            bgVideo.crossOrigin = 'anonymous';
+            bgVideo.loop = true;
+            bgVideo.muted = true;
+            bgVideo.playsInline = true;
+            bgVideo.setAttribute('muted', '');
+            bgVideo.setAttribute('playsinline', '');
+            bgVideo.setAttribute('webkit-playsinline', '');
+
+            bgVideo.addEventListener('error', () => {
+                console.warn(`No se pudo cargar el video de fondo: ${configNFT.backgroundImage}`);
                 scene.background = new THREE.Color(configNFT.colorFondo);
-            }
-        );
+            });
+
+            bgVideo.play().catch(err => console.warn("Autoplay de fondo en espera:", err));
+
+            const bgVideoTexture = new THREE.VideoTexture(bgVideo);
+            bgVideoTexture.colorSpace = THREE.SRGBColorSpace;
+            scene.background = bgVideoTexture;
+        } else {
+            const bgLoader = new THREE.TextureLoader();
+            bgLoader.load(
+                configNFT.backgroundImage,
+                function (texture) {
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    scene.background = texture;
+                },
+                undefined,
+                function () {
+                    scene.background = new THREE.Color(configNFT.colorFondo);
+                }
+            );
+        }
     } else {
         scene.background = new THREE.Color(configNFT.colorFondo);
     }
@@ -714,7 +741,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     model.rotation.y = rotacionActual;
     model.updateMatrixWorld(true);
 
-    // USAMOS EL SCALE CONFIGURADO EN EL JSON (O EL POR DEFECTO)
     const anchoPlano = anchoLocal * configNFT.subtitleScale;
     const altoPlano = anchoPlano * (canvasSub.height / canvasSub.width);
 
@@ -729,7 +755,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     const mallaSubtitulos = new THREE.Mesh(geoSubtitulos, matSubtitulos);
 
-    // USAMOS EL OFFSET_Y CONFIGURADO EN EL JSON
     mallaSubtitulos.position.set(
         centroLocal.x,
         centroLocal.y + (altoLocal * configNFT.subtitleOffsetY),
@@ -738,14 +763,12 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     model.add(mallaSubtitulos);
 
-    // USAMOS EL TAMAÑO DE FUENTE DEL JSON
     const fontSize = configNFT.subtitleFontSize;
     const lineHeight = fontSize * 1.35;
 
     function calcularLineas(textoCompleto) {
         ctx.save();
         ctx.font = `italic ${fontSize}px "Times New Roman", serif`;
-        // USAMOS EL MARGEN CONFIGURADO EN EL JSON
         const maxWidth = canvasSub.width * configNFT.subtitleMaxWidth;
 
         const palabras = textoCompleto.split(' ');

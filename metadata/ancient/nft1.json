@@ -16,7 +16,7 @@
   "rarity": "Epic",
   "frames_count": 1,
   "cycle_interval": 30000,
-  "background_image": "environments/bg_3.png",
+  "background_image": "environments/bg_3.mp4",
   "media_files": [
     "1.mp4"
   ],
