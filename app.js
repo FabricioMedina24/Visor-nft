@@ -59,7 +59,13 @@ const CONFIG_POR_DEFECTO = {
     cameraFov: 75,
     cameraDistanceFactor: 0.9,
     autoRotateSpeed: 1.0,
-    inactivityDelay: 5000
+    inactivityDelay: 5000,
+    
+    // NUEVOS VALORES POR DEFECTO PARA SUBTÍTULOS
+    subtitleScale: 0.90,       // 90% del ancho del lienzo
+    subtitleOffsetY: -0.32,    // Posición Y relativa (-0.5 es el fondo, 0 es el medio)
+    subtitleFontSize: 38,      // Tamaño de fuente en el canvas 2D
+    subtitleMaxWidth: 0.88     // Radio de margen interno para word-wrap
 };
 
 const CONFIGURACION_RAREZAS = {
@@ -139,7 +145,13 @@ async function obtenerConfiguracionNFT(coleccion, id) {
             cameraFov: metadata.camera?.fov ?? CONFIG_POR_DEFECTO.cameraFov,
             cameraDistanceFactor: metadata.camera?.distance_factor ?? CONFIG_POR_DEFECTO.cameraDistanceFactor,
             autoRotateSpeed: metadata.camera?.auto_rotate_speed ?? CONFIG_POR_DEFECTO.autoRotateSpeed,
-            inactivityDelay: metadata.camera?.inactivity_delay ?? CONFIG_POR_DEFECTO.inactivityDelay
+            inactivityDelay: metadata.camera?.inactivity_delay ?? CONFIG_POR_DEFECTO.inactivityDelay,
+            
+            // LECTURA DE METADATOS PARA SUBTÍTULOS
+            subtitleScale: metadata.subtitles?.scale ?? CONFIG_POR_DEFECTO.subtitleScale,
+            subtitleOffsetY: metadata.subtitles?.offset_y ?? CONFIG_POR_DEFECTO.subtitleOffsetY,
+            subtitleFontSize: metadata.subtitles?.font_size ?? CONFIG_POR_DEFECTO.subtitleFontSize,
+            subtitleMaxWidth: metadata.subtitles?.max_width_ratio ?? CONFIG_POR_DEFECTO.subtitleMaxWidth
         };
 
     } catch (error) {
@@ -669,14 +681,13 @@ async function inicializarVisorColeccion(coleccion, id) {
 }
 
 // =========================================================================
-// SUBTÍTULOS INTEGRADOS EN EL LIENZO 3D (SIN FONDO + EFECTO ESCRITURA)
+// SUBTÍTULOS INTEGRADOS EN EL LIENZO 3D (AJUSTABLES POR METADATOS)
 // =========================================================================
 async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     if (!lienzo) return;
 
     const hexMagia = configNFT.emissiveColor.toString(16).padStart(6, '0');
 
-    // 1. Crear Canvas 2D transparente para renderizar los subtítulos
     const canvasSub = document.createElement('canvas');
     canvasSub.width = 1024;
     canvasSub.height = 512;
@@ -687,7 +698,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     texturaSubtitulos.minFilter = THREE.LinearFilter;
     texturaSubtitulos.magFilter = THREE.LinearFilter;
 
-    // 2. Calcular dimensiones del lienzo en coordenadas locales de 'model'
     const rotacionActual = model.rotation.y;
     model.rotation.y = 0;
     model.updateMatrixWorld(true);
@@ -704,8 +714,8 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
     model.rotation.y = rotacionActual;
     model.updateMatrixWorld(true);
 
-    // 3. Crear el plano de subtítulos ubicado en la parte inferior del lienzo
-    const anchoPlano = anchoLocal * 0.92;
+    // USAMOS EL SCALE CONFIGURADO EN EL JSON (O EL POR DEFECTO)
+    const anchoPlano = anchoLocal * configNFT.subtitleScale;
     const altoPlano = anchoPlano * (canvasSub.height / canvasSub.width);
 
     const geoSubtitulos = new THREE.PlaneGeometry(anchoPlano, altoPlano);
@@ -719,22 +729,24 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
     const mallaSubtitulos = new THREE.Mesh(geoSubtitulos, matSubtitulos);
 
+    // USAMOS EL OFFSET_Y CONFIGURADO EN EL JSON
     mallaSubtitulos.position.set(
         centroLocal.x,
-        centroLocal.y - (altoLocal * 0.32),
-        centroLocal.z + (grosorLocalZ / 2) + 0.002
+        centroLocal.y + (altoLocal * configNFT.subtitleOffsetY),
+        centroLocal.z + (grosorLocalZ / 2) + 0.008
     );
 
     model.add(mallaSubtitulos);
 
-    // 4. Dividir el texto completo en líneas fijas para que no salten al escribirse
-    const fontSize = 38;
+    // USAMOS EL TAMAÑO DE FUENTE DEL JSON
+    const fontSize = configNFT.subtitleFontSize;
     const lineHeight = fontSize * 1.35;
 
     function calcularLineas(textoCompleto) {
         ctx.save();
         ctx.font = `italic ${fontSize}px "Times New Roman", serif`;
-        const maxWidth = canvasSub.width * 0.88;
+        // USAMOS EL MARGEN CONFIGURADO EN EL JSON
+        const maxWidth = canvasSub.width * configNFT.subtitleMaxWidth;
 
         const palabras = textoCompleto.split(' ');
         const lineas = [];
@@ -755,7 +767,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
         return lineas;
     }
 
-    // 5. Dibujar únicamente los caracteres revelados hasta el momento (sin ningún fondo)
     function renderizarFrameTexto(lineasCompletas, caracteresMostrados) {
         ctx.clearRect(0, 0, canvasSub.width, canvasSub.height);
 
@@ -778,7 +789,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
 
             const y = startY + (index * lineHeight);
 
-            // Contorno negro nítido para separar la letra del video sin usar caja de fondo
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
             ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
@@ -786,7 +796,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
             ctx.lineJoin = 'round';
             ctx.strokeText(textoParcial, canvasSub.width / 2, y);
 
-            // Relleno blanco con resplandor del color mágico del NFT
             ctx.shadowColor = `#${hexMagia}`;
             ctx.shadowBlur = 15;
             ctx.fillStyle = '#ffffff';
@@ -797,7 +806,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
         texturaSubtitulos.needsUpdate = true;
     }
 
-    // 6. Animación de máquina de escribir (Typewriter)
     let intervaloEscritura = null;
     let timeoutOcultar = null;
 
@@ -827,7 +835,6 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
         }, velocidadMs);
     }
 
-    // 7. Animación suave de opacidad (Fade Out al terminar)
     let idAnimacionOpacidad = null;
     function animarOpacidadSubtitulo(opacidadDestino, duracion = 500) {
         if (idAnimacionOpacidad) cancelAnimationFrame(idAnimacionOpacidad);
