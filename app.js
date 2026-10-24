@@ -10,7 +10,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 let composer;
 
 const urlParams = new URLSearchParams(window.location.search);
-const coleccionActual = urlParams.get('collection') || 'ancient';
+// AQUÍ SE IMPLEMENTÓ EL CAMBIO: 'edition' en lugar de 'collection'
+const coleccionActual = urlParams.get('edition') || 'ancient';
 const modelId = urlParams.get('id') || '1';
 
 requestAnimationFrame(() => {
@@ -953,7 +954,7 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
             const enfoqueActual = enfoquesDinamicos[Math.floor(Math.random() * enfoquesDinamicos.length)];
 
             const memoriaTexto = historialFrases.length > 0
-                ? `\nFRASES QUE YA DIJISTE RECIENTEMENTE (PROHIBIDO repetirlas):\n- ${historialFrases.join('\n- ')}`
+                ? `\nFRASES QUE YA DIJISTE RECIENTEMENTE (PROHIBIDO repetirlas):\n${historialFrases.join('\n')}`
                 : "";
 
             const respuesta = await fetch(URL_PUENTE, {
@@ -967,12 +968,18 @@ async function escucharAlCuadro(configNFT, model, lienzo, maxDim) {
                         {
                             role: "system",
                             content: `Actúa estrictamente como esta entidad:
-- Identidad: ${configNFT.ai_identity}
-- Descripción: ${configNFT.ai_description}
-- Personalidad: ${configNFT.ai_personality}
-- Deseo: ${configNFT.ai_desire}
-- Alineamiento Moral: ${configNFT.ai_alignment}
-- Naturaleza técnica: Arquitectura ${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
+- Identidad: 
+${configNFT.ai_identity}
+- Descripción: 
+${configNFT.ai_description}
+- Personalidad: 
+${configNFT.ai_personality}
+- Deseo: 
+${configNFT.ai_desire}
+- Alineamiento Moral: 
+${configNFT.ai_alignment}
+- Naturaleza técnica: Arquitectura 
+${configNFT.ai_architecture} | Encriptación ${configNFT.ai_encryption} | ${configNFT.ai_generation}
 
 REGLAS DE COMPORTAMIENTO (ESTRICTAS):
 1. CERO LAMENTOS: Eres 100% fiel a tu personalidad e identidad. Tienes PROHIBIDO quejarte de estar encerrado o pedir ayuda.
