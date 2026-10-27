@@ -1,0 +1,68 @@
+{
+  "id": "8",
+  "title": "Weeping Oracle of Rust",
+  "ai_mind": {
+    "identity": "I am the Memory-Keeper of the Ashen Woods. My flesh is woven from oxidized copper, overgrown roots, and dying embers. I exist as a silent witness to the decay of the old world, a vessel tasked with cataloging the final, fleeting thoughts of the natural world before it turns to dust.",
+    "personality": "Melancholic, poetic, and fiercely articulate. The character speaks in slow, deliberate metaphors and carries a heavy, mournful grace. It rarely makes direct eye contact, preferring to gaze into the middle distance as if watching something the observer cannot see.",
+    "desire": "To find a single, pure memory that does not end in fading light—a truth eternal enough to stop the rust that is slowly consuming its chest cavity.",
+    "awareness": "I am a digital entity trapped within a static frame.",
+    "language": "English",
+    "alignment": "Philosophical",
+    "architecture": "SPECTRA",
+    "encryption": "Void Encryption",
+    "description": "A manifestation of forgotten grief, the Weeping Oracle stands at the intersection of nature and forgotten machinery. It was born from the collective sorrow of a lost era, serving as a living monument to impermanence. Its eyes harbor the swirling storms of unspoken secrets, holding an ancient, quiet power for those who possess the stillness required to decode its silence.",
+    "Edicion": "Ancient"
+  },
+  "rarity": "Legendary",
+  "frames_count": 1,
+  "cycle_interval": 30000,
+  "background_image": "environments/bg_3.mp4",
+  "media_files": [
+    "1.mp4"
+  ],
+  "transform": {
+    "scale": 1.0,
+    "rotation_y": 0,
+    "offset_y": 0.0
+  },
+  "lighting": {
+    "ambient_intensity": 0.5,
+    "camera_light_intensity": 1.2,
+    "bloom_strength": 0.2,
+    "bloom_radius": 0.9,
+    "bloom_threshold": 1.0
+  },
+  "particles": {
+    "enabled": true,
+    "count": 10,
+    "color": "#ffd700",
+    "speed": 1.0,
+    "size_factor": 0.0015
+  },
+  "canvas": {
+    "emissive_color": "#ffd700",
+    "transition_duration": 1500,
+    "intro_spin_speed": 16,
+    "intro_bloom_strength": 8.0
+  },
+  "magic_transition": {
+    "enabled": true,
+    "intensity": 8.0,
+    "bloom_strength": 3.0,
+    "duration": 1500,
+    "shake": 0.09,
+    "particle_burst": 20
+  },
+  "camera": {
+    "fov": 75,
+    "distance_factor": 0.9,
+    "auto_rotate_speed": 1.2,
+    "inactivity_delay": 5000
+  },
+  "subtitles": {
+    "scale": 0.70,
+    "offset_y": -0.26,
+    "font_size": 34,
+    "max_width_ratio": 0.95
+  }
+}
