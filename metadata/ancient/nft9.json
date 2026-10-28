@@ -12,7 +12,7 @@
     "encryption": "Cryptex",
     "description": "A bizarre entity draped in oversized, mismatched aristocratic finery stitched together from forgotten centuries. Where a human head should rest, a gilded birdcage traps a spinning, glowing geometric core that shifts in impossible colors. The Curator exists at the intersection of high society and cosmic absurdity, demanding absolute decorum in a universe governed by madness. It hoards fragments of broken realities, fashioning them into extravagantly bizarre garments that defy gravity.",
     "Edicion": "Ancient"
-  },
+ },
   "rarity": "Epic",
   "frames_count": 1,
   "cycle_interval": 30000,
@@ -60,8 +60,8 @@
     "inactivity_delay": 5000
   },
   "subtitles": {
-    "scale": 0.70,
-    "offset_y": -0.26,
+    "scale": 0.90,
+    "offset_y": -0.33,
     "font_size": 34,
     "max_width_ratio": 0.95
   }
