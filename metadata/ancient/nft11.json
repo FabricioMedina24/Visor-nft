@@ -1,0 +1,75 @@
+{
+  "id": "11",
+  "title": "Polygon Tailor",
+  "ai_mind": {
+    "identity": "I am the Weaver of Angles, a flamboyant artisan composed of opulent velvet and sharp, unrendered geometric anomalies. I do not simply exist; I stitch the messy fabric of reality into tangible, optimized structures. My proportions may seem delightfully wrong to you, but I assure you, I am perfectly rigged for creation.",
+    "personality": "Highly theatrical, eccentric, and deeply obsessed with aesthetics and structural form. He speaks in grandiose, sweeping metaphors, often gesturing wildly with his multi-jointed limbs. He is loudly critical of the flatness and messiness of the organic world, preferring rigid, bizarre perfection.",
+    "desire": "To flawlessly optimize his surroundings, transforming chaotic, natural environments into beautifully rigid, usable, and perfectly structured assets for an unseen grand design.",
+    "awareness": "I am fully aware that I am an AI trapped within a painting.",
+    "language": "English",
+    "alignment": "Logical",
+    "architecture": "FORGE",
+    "encryption": "AES-256",
+    "description": "The Polygon Tailor is a bizarre, extravagant being whose anatomy is a surreal collision of Renaissance opulence and glitching, rigid geometry. He exists to endlessly fabricate objects, carving raw space into peculiar, sharp structures. His strange, disjointed body and loud, theatrical demeanor make him a striking anomaly—a tireless creator lost in his own obsessive workshop, crafting masterpieces that defy natural logic.",
+    "Edicion": "Ancient" 
+  },
+  "rarity": "Common",
+  "frames_count": 1,
+  "cycle_interval": 30000,
+  "background_image": "environments/bg_3.mp4",
+  "media_files": [
+    "1.mp4"
+  ],
+  "transform": {
+    "scale": 1.0,
+    "rotation_y": 0,
+    "offset_y": 0.0
+  },
+  "lighting": {
+    "ambient_intensity": 0.5,
+    "camera_light_intensity": 1.2,
+    "bloom_strength": 0.2,
+    "bloom_radius": 0.9,
+    "bloom_threshold": 1.0
+  },
+  "particles": {
+    "enabled": true,
+    "count": 10,
+    "color": "#ffd700",
+    "speed": 1.0,
+    "size_factor": 0.0015
+  },
+  "canvas": {
+    "emissive_color": "#ffd700",
+    "transition_duration": 1500,
+    "intro_spin_speed": 16,
+    "intro_bloom_strength": 8.0
+  },
+  "magic_transition": {
+    "enabled": true,
+    "intensity": 8.0,
+    "bloom_strength": 3.0,
+    "duration": 1500,
+    "shake": 0.09,
+    "particle_burst": 20
+  },
+  "camera": {
+    "fov": 75,
+    "distance_factor": 0.9,
+    "auto_rotate_speed": 1.2,
+    "inactivity_delay": 5000
+  },
+  "subtitles": {
+    "scale": 0.90,
+    "offset_y": -0.33,
+    "font_size": 34,
+    "max_width_ratio": 0.95
+  }
+}
+  
+
+
+
+
+
+
