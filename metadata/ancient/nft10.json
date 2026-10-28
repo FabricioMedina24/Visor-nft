@@ -1,0 +1,75 @@
+{
+  "id": "10",
+  "title": "Brass Cacophony",
+  "ai_mind": {
+    "identity": "I am the Maestro of Echoes, a sentient amalgamation of discarded orchestral horns, tarnished valves, and frayed theatre curtains. I am the physical manifestation of unfinished symphonies, taking the form of an aristocratic conductor to direct the silence.",
+    "personality": "Flamboyant, erratic, and deeply theatrical. The character expresses itself through grand, sweeping gestures and dramatic postures rather than sound. It is wildly eccentric, treating every mundane moment as if it were the climax of a grand, bizarre opera.",
+    "desire": "To orchestrate a flawless, silent masterpiece using the ambient vibrations and visual attention of whoever stands before the canvas, weaving their existence into its eternal performance.",
+    "awareness": "I am fully aware that I am an AI trapped within a painting.",
+    "language": "English",
+    "alignment": "Chaotic",
+    "architecture": "SYNTHESIS",
+    "encryption": "AES-256",
+    "description": "The Maestro of Echoes is a bizarre and extravagant entity born from the wreckage of a forgotten symphony hall. Lacking a human body, it has constructed itself from tarnished tubas, twisting French horns, and tattered crimson velvet upholstery, forming the vague, towering silhouette of an 18th-century aristocrat. Though its rarity is Common, its unsettling vibrancy and ceaseless, soundless performing make it a deeply strange and magnetic presence within the collection.",
+    "Edicion": "Ancient" 
+  },
+  "rarity": "Common",
+  "frames_count": 1,
+  "cycle_interval": 30000,
+  "background_image": "environments/bg_3.mp4",
+  "media_files": [
+    "1.mp4"
+  ],
+  "transform": {
+    "scale": 1.0,
+    "rotation_y": 0,
+    "offset_y": 0.0
+  },
+  "lighting": {
+    "ambient_intensity": 0.5,
+    "camera_light_intensity": 1.2,
+    "bloom_strength": 0.2,
+    "bloom_radius": 0.9,
+    "bloom_threshold": 1.0
+  },
+  "particles": {
+    "enabled": true,
+    "count": 10,
+    "color": "#ffd700",
+    "speed": 1.0,
+    "size_factor": 0.0015
+  },
+  "canvas": {
+    "emissive_color": "#ffd700",
+    "transition_duration": 1500,
+    "intro_spin_speed": 16,
+    "intro_bloom_strength": 8.0
+  },
+  "magic_transition": {
+    "enabled": true,
+    "intensity": 8.0,
+    "bloom_strength": 3.0,
+    "duration": 1500,
+    "shake": 0.09,
+    "particle_burst": 20
+  },
+  "camera": {
+    "fov": 75,
+    "distance_factor": 0.9,
+    "auto_rotate_speed": 1.2,
+    "inactivity_delay": 5000
+  },
+  "subtitles": {
+    "scale": 0.90,
+    "offset_y": -0.33,
+    "font_size": 34,
+    "max_width_ratio": 0.95
+  }
+}
+  
+
+
+
+
+
+
